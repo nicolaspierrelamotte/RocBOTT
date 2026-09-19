@@ -1,43 +1,44 @@
 # PRISE DE RELAIS — dépôt RocBOTT
 
-Document autonome, à lire en premier par la session qui reprend. Mis à jour par chaque session.
+À lire en premier. Document autonome, mis à jour par chaque session.
 
-## Où est quoi
+## Ce qu'est ce dépôt
 
-- **Ce dépôt GitHub** (`nicolaspierrelamotte/RocBOTT`) était **vide** le 19/09/2026 : aucun commit, aucune branche. Il ne contient **pas** le laboratoire historique (153 campagnes, bancs de démo, `execution/strategies/turtle_soup.py`, `crabel_orb.py`, `docs/PROTOCOLE.md`). Tout cela est dans le dossier OneDrive du projet.
-- Conséquence : les faits marqués **[PRINCIPALE]** dans le relais de réflexion **n'ont pas pu être recoupés ici**. Ils restent à recouper avec le dépôt OneDrive.
+**L'archive des sessions de réflexion.** Il sert à ne rien perdre : les documents de relais, les notes, et les instruments qui ont servi à produire les chiffres. Il ne pilote ni le développement ni l'environnement — c'est une autre session qui tient le laboratoire (les 153 campagnes, les bancs de démo, `turtle_soup.py`, `crabel_orb.py`, `docs/PROTOCOLE.md`), dans le dossier OneDrive du projet.
 
-## Session du 19/09/2026 (branche `claude/trading-bot-algo-relais-onwbvn`)
+Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les documents de relais **n'ont jamais pu être recoupés ici**. Ils restent à recouper avec OneDrive.
 
-Reçu de Nicolas : le relais de la session de réflexion, la spec Zone de bruit v0.1 et le catalogue v0.2 (qui remplace v0.1, non transmis).
+## Contenu
 
-Fait :
-1. Dépôt des trois documents dans `docs/`.
-2. `docs/PROTOCOLE_ADDENDA_2026-09-19.md` : les règles à inscrire au protocole, séparées en acceptées / proposées.
-3. `lab/` : outils génériques du point 1 de l'ordre de marche, indépendants du pipeline OneDrive :
-   - `synthetic.py` — marche aléatoire à dérive nulle, avantage planté, remplacement du futur par du bruit ;
-   - `simulate.py` — simulation de trades (stop, objectif, durée, péage, filtre de population) ;
-   - `acausality.py` — détecteur mécanique de fuite du futur ;
-   - `control.py` — témoin à dérive nulle et test de puissance ;
-   - `ftmo.py` — probabilité de passer le 2-Step par rééchantillonnage des journées.
-   - `tests/` : 9 tests, tous verts. Le filtre de Colibri est reproduit et attrapé.
+| fichier | quoi |
+|---|---|
+| `docs/PRISE_DE_RELAIS_REFLEXION_2026-09-19.md` | relais de la session de réflexion du 19/09. **À lire en premier des trois.** |
+| `docs/SPEC_ZONE_DE_BRUIT_v0.1.md` | 27 règles `Z-`, 11 décisions ouvertes `DZ-`, cibles de réplication. |
+| `docs/CATALOGUE_ACTEURS_FORCES_v0.2.md` | 8 acteurs forcés, 3 familles de niveaux, protocole de mesure, sources de données. Remplace la v0.1, non conservée. |
+| `docs/NOTE_REFLEXION_2026-09-19_session2.md` | note de la session 2 : le piège du critère de jugement, le budget de puissance des nombres ronds, la source Myfxbook. |
+| `docs/PROTOCOLE_ADDENDA_2026-09-19.md` | règles à inscrire au protocole, séparées en acceptées et proposées. |
+| `lab/`, `tests/` | instruments de réflexion : marche à dérive nulle, avantage planté, détecteur d'acausalité, témoin, test de puissance, critère FTMO. Prototypes, pas une livraison de dev. |
 
-Non fait, et pourquoi :
-- Recalcul du résultat sur les sorties sur la population causale (alerte §6 du relais) : le code et les données sont dans OneDrive.
-- Enregistreur de données d'ordres, instruction FXSSI : demande un accès réseau et un budget, à l'arbitrage de Nicolas.
-- Aucune campagne lancée : la priorité niveaux populaires / zone de bruit est à l'arbitrage.
+## Ce qui a été établi ici, et qui ne vient d'aucune source extérieure
 
-## Prochaine session
+1. **Le filtre de Colibri est reproduit et attrapé.** « Jeter la barre externe d'entrée », appliqué à un suivi naïf sur du bruit pur sans dérive, fabrique un R positif (t > 5). Le détecteur d'acausalité le signale ; la même règle appliquée à la barre de décision est causale et rend zéro. Le diagnostic de la session principale est donc cohérent de bout en bout.
+2. **L'arithmétique FTMO du relais §2 est confirmée**, et elle ne dépend pas de la taille du pari : 1/2 et 2/3 quel que soit le risque par trade, de 0,25 % à 3 %. La taille achète de la vitesse, jamais de la chance.
+3. **Le critère de jugement commun a un défaut** (note session 2, §1.2). Le rééchantillonnage des journées hérite de la dérive accidentelle de l'échantillon et l'amplifie : sur 16 000 trades d'espérance vraie nulle, la probabilité de passage affichée va de 0,31 à 0,83. À corriger avant de s'appuyer dessus.
+4. **La campagne nombres ronds a une puissance surabondante** : de l'ordre de 700 000 événements disponibles contre ~5 000 trades nécessaires. Sa contrainte est le péage aux franchissements, pas la statistique.
 
-1. Brancher le pipeline OneDrive sur `lab.control.power_test` et `zero_drift_control` (interface : une fonction `signal(bars)` et un filtre de population). Lire d'abord `docs/PROTOCOLE_ADDENDA_2026-09-19.md`.
-2. Passer le résultat sur les sorties au détecteur d'acausalité avant de le conserver.
-3. Ensuite seulement : campagne nombres ronds (catalogue §5.5) ou campagne 165 (spec), selon l'arbitrage.
+## Urgent, et irrattrapable
 
-## À l'arbitrage de Nicolas (repris du relais §11, inchangé)
+**Démarrer un enregistreur de données d'ordres.** L'API Myfxbook `get-community-outlook` est gratuite et donne, par symbole, le prix d'entrée moyen de chaque camp en plus des volumes et du nombre de positions. Aucun historique n'est fourni : chaque semaine sans enregistreur est une semaine perdue pour toujours. Détail et réserves dans la note de session 2, §3.2.
 
-- Priorité entre niveaux populaires et zone de bruit.
-- Levier du compte Swing à vérifier avant tout dimensionnement.
+## À l'arbitrage de Nicolas
+
+Repris du relais §11, plus les ajouts de la session 2 :
+
+- Priorité entre niveaux populaires et zone de bruit. **Avis argumenté de la session 2 : nombres ronds d'abord**, pour la puissance.
+- Démarrage de l'enregistreur Myfxbook (voir ci-dessus).
+- Récupération à la main des PDF d'Osler 2003 et 2005 : le proxy réseau bloque la Fed de New York, Georgetown, Brandeis et arXiv, donc aucune ampleur chiffrée ne peut entrer dans le catalogue sans toi.
+- FXSSI : prix, profondeur d'historique, export. OANDA : état réel des points d'accès v20 et conditions d'utilisation de l'outil public.
+- Levier du compte Swing, à vérifier avant tout dimensionnement.
 - Source de vrai volume (contrats à terme) et d'encours d'options.
-- Budget acceptable pour une source de données d'ordres (FXSSI à instruire).
-- Largeur de zone autour d'un niveau, distances de rebond et de pénétration : en unité de volatilité, déclarées avant mesure.
-- Sort du résultat sur les sorties s'il ne survit pas au recalcul.
+- Largeur de zone et distances de rebond et de pénétration : en unité de volatilité, déclarées avant mesure.
+- Sort du résultat sur les sorties s'il ne survit pas au recalcul sur la population causale (alerte non résolue du relais §6).

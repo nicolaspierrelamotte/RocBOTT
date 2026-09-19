@@ -19,8 +19,17 @@ Statut : **proposition**. Le `PROTOCOLE.md` de référence est dans le dossier O
 | S1 | **Seuil lié au registre** : 153 essais au seuil usuel = 7 à 8 faux positifs attendus. Bonferroni donne t ≈ 3,6 ; le seuil monte avec le registre. | argument `t_threshold` de `power_test` |
 | S2 | **Test à rebours** sur années anciennes : un effet présent aussi en 2008–2015 est structurel. Pour la zone de bruit, l'absence 2010–2017 est connue d'avance. | — |
 | J1 | **Critère de jugement** : probabilité d'atteindre la cible avant −10 % statique ou −5 % sur un jour, par rééchantillonnage des journées. Le Sharpe ne suffit pas. | `lab.ftmo.two_step_pass_probability` |
+| J1' | **Le chiffre de J1 ne se publie jamais seul.** Le rééchantillonnage hérite de la dérive réalisée de l'échantillon et l'amplifie : sur 16 000 trades d'espérance vraie nulle, la probabilité affichée va de 0,31 à 0,83. Toujours donner à côté (a) la même mesure sur l'échantillon **centré**, qui est le zéro de référence, et (b) une **bande** obtenue en rééchantillonnant l'échantillon lui-même. Ajouté le 19/09/2026, session 2. | `scripts/chiffres_note_session2.py`, section 3 |
 
 ## Ce que les tests du dépôt établissent déjà
 
 - `tests/test_colibri_reproduction.py` : le filtre « jeter la barre externe d'entrée », appliqué à un suivi naïf sur une marche **sans dérive**, fabrique un R positif (t > 5) ; le détecteur T1 le signale ; la même règle appliquée à la barre de décision est causale et rend zéro.
 - `tests/test_ftmo.py` : sans avantage, P(+10 avant −10) = 1/2 et P(+5 avant −10) = 2/3, comme au relais §2. Un déséquilibre de 1,5 % des journées suffit à faire passer P de 0,50 à 0,62 : la probabilité de passage est très sensible à une dérive minuscule, dans les deux sens.
+
+## Ajouté par la session de réflexion 2 (19/09/2026)
+
+- **J1'** ci-dessus : la correction porte sur le critère de jugement commun aux deux sessions. C'est le point le plus important de la note de session 2.
+- **Confirmation de l'arithmétique du relais §2** : P(+10 avant −10) = 1/2 et P(+5 avant −10) = 2/3 sur échantillon centré, **indifféremment de la taille du pari** de 0,25 % à 3 % de risque par trade. La taille achète du temps, pas de la probabilité.
+- **Ordre de grandeur à retenir pour dimensionner une campagne** : la cible réaliste est 0,05 R net de péage, et la prouver au seuil du registre (t = 3,6) demande de l'ordre de **5 000 trades causaux**.
+
+Tous les chiffres de cette section sont reproductibles par `python scripts/chiffres_note_session2.py`.
