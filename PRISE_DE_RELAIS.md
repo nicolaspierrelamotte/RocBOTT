@@ -17,6 +17,7 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 | `docs/CATALOGUE_ACTEURS_FORCES_v0.2.md` | 8 acteurs forcés, 3 familles de niveaux, protocole de mesure, sources de données. Remplace la v0.1, non conservée. |
 | `docs/NOTE_REFLEXION_2026-09-19_session2.md` | note de la session 2 : le piège du critère de jugement, le budget de puissance des nombres ronds, la source Myfxbook. |
 | `docs/PROTOCOLE_ADDENDA_2026-09-19.md` | règles à inscrire au protocole, séparées en acceptées et proposées. |
+| `docs/ENVIRONNEMENT_ACCES_RESEAU.md` | pourquoi les sources sont inaccessibles depuis les sessions, le réglage exact à changer, et ce que l'enregistreur Myfxbook doit capter. **À passer au dev.** |
 | `lab/`, `tests/` | instruments de réflexion : marche à dérive nulle, avantage planté, détecteur d'acausalité, témoin, test de puissance, critère FTMO. Prototypes, pas une livraison de dev. |
 
 ## Ce qui a été établi ici, et qui ne vient d'aucune source extérieure
@@ -28,7 +29,9 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 
 ## Urgent, et irrattrapable
 
-**Démarrer un enregistreur de données d'ordres.** L'API Myfxbook `get-community-outlook` est gratuite et donne, par symbole, le prix d'entrée moyen de chaque camp en plus des volumes et du nombre de positions. Aucun historique n'est fourni : chaque semaine sans enregistreur est une semaine perdue pour toujours. Détail et réserves dans la note de session 2, §3.2.
+**Démarrer un enregistreur de données d'ordres.** L'API Myfxbook `get-community-outlook` est gratuite et donne, par symbole, le prix d'entrée moyen de chaque camp en plus des volumes et du nombre de positions. Aucun historique n'est fourni : chaque semaine sans enregistreur est une semaine perdue pour toujours. Détail et réserves dans la note de session 2, §3.2 ; champs à capter et règles d'enregistrement dans `docs/ENVIRONNEMENT_ACCES_RESEAU.md`.
+
+**L'enregistreur ne peut pas vivre dans une session infonuagique** : la machine virtuelle est récupérée après inactivité et tout ce qui tourne en arrière-plan meurt avec elle. Il lui faut un hôte permanent. Ce point est indépendant du réglage réseau : les deux chantiers avancent en parallèle.
 
 ## À l'arbitrage de Nicolas
 
