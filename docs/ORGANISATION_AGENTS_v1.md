@@ -133,3 +133,69 @@ Aucune de ces cinq pièces ne suffit seule. Le rapport d'audit est ce qui arrive
 2. Choisir les deux familles de modèles (une pour construire, une pour vérifier et juger).
 3. Écrire le script de publication du Greffier (portes P1 à P5).
 4. Première campagne sous cette organisation : **le temps 1 de l'analyse du 13/10**, en salle blanche, ici — recalcul des poches S02/S03 contre le chiffre scellé. C'est à la fois un test de l'organisation et la réponse à la question qui pèse depuis le 25/09.
+
+## 7. Implémentation (14/10/2026, mercredi)
+
+Les cinq rôles existent maintenant comme agents Claude Code, dans `.claude/agents/`. Les consignes du §1 y sont la source unique ; `agents/README.md` ne fait que renvoyer.
+
+### Affectation des modèles
+
+| rôle | fichier | modèle | effort | tâche | outils |
+|---|---|---|---|---|---|
+| Constructeur | `constructeur.md` | `claude-sonnet-5-5` | high | dev | Read, Write, Edit, Bash, Glob, Grep |
+| Vérificateur critique | `verificateur.md` | `claude-opus-5-5` | xhigh | analyse | Read, Write, Glob, Grep — **pas de Bash, pas d'Edit** : il ne lance rien |
+| Juge (salle blanche) | `juge.md` | `claude-opus-5-5` | xhigh | analyse + recalcul | Read, Write, Edit, Bash, Glob, Grep |
+| Greffier | `greffier.md` | `claude-sonnet-5-5` | medium | dev (scripts) | Read, Write, Edit, Bash, Glob, Grep |
+| Rapporteur pour l'Arbitre | `rapporteur.md` | `claude-opus-5-5` | high | analyse | Read, Write, Glob, Grep |
+
+Règle d'affectation demandée par Nicolas : **Sonnet 5.5 pour le développement, Opus 5.5 pour l'analyse.** Le cinquième rôle, l'Arbitre, est Nicolas ; l'agent `rapporteur` prépare sa fiche et ne décide rien.
+
+**Réserve honnête sur l'indépendance.** Le §2 demandait des *familles* de modèles différentes entre Constructeur et Juge. Sonnet 5.5 et Opus 5.5 sont deux modèles d'une même famille : leurs angles morts se recouvrent davantage que ceux de deux fournisseurs. L'indépendance repose donc surtout sur les **murs mécaniques** ci-dessous et sur la **session neuve** à chaque campagne (`omitClaudeMd: true` sur le Vérificateur et le Juge, pas de mémoire partagée). Si un jour un modèle d'une autre famille est disponible dans Claude Code, le Juge est le rôle à y déplacer en premier.
+
+### Les murs, tenus par un hook
+
+`.claude/hooks/murs.py`, enregistré dans `.claude/settings.json` comme hook `PreToolUse` sur `Read|Write|Edit|NotebookEdit|Grep|Glob|Bash`. Le hook reçoit `agent_type` et refuse :
+
+| rôle | ne peut pas lire | ne peut écrire que dans |
+|---|---|---|
+| constructeur | `30_juge/`, `cle_aveugle`, `coffre/` | `10_constructeur/`, `30_juge/entrees/` |
+| verificateur | `resultats/`, `30_juge/`, `40_greffier/`, `fiches/`, `registre/registre.jsonl`, `cle_aveugle`, `coffre/` | `20_verificateur/` |
+| juge | `10_constructeur/`, `20_verificateur/`, `cle_aveugle`, `coffre/`, OneDrive | `30_juge/` |
+| rapporteur | `cle_aveugle`, `coffre/` | `fiches/` |
+| greffier | `coffre/` | (libre) |
+| tous | — | **jamais** `00_preenregistrement.md` par un outil : il est scellé |
+
+Limite assumée : pour Bash, le hook inspecte la ligne de commande. C'est un mur contre la dérive ordinaire d'un modèle, pas contre un agent qui chercherait à le contourner. Le hook est testé comme du code (`tests/test_organisation.py`). Il ne s'applique qu'aux sous-agents : la session principale n'a pas de mur, c'est elle qui orchestre.
+
+### Les portes, tenues par un script
+
+`scripts/greffier_publier.py <id>` est le veto mécanique du Greffier. Il vérifie, et refuse en nommant chaque porte fermée :
+
+- **P1** : `00_preenregistrement.md` existe, ses champs sont remplis (plus aucun `<…>` de gabarit), il est **commité avant le verdict** (preuve par `git log`).
+- **P2** : MDE et date de décision déclarés dans le pré-enregistrement.
+- **P3** : `30_juge/temoin_derive_nulle.json` présent, |t| < 3.
+- **P4** : `30_juge/acausalite.json` présent, `n_changed == 0`.
+- **P5** : `verdict.md` contient un des quatre verdicts, les quatre voisins (MDE, centré, alternative, note), pas de `ÉCART À COMPRENDRE`, pas de `TUÉ` sans MDE, et **aucune objection HAUTE ouverte** dans `objections.md`.
+
+Si tout passe, l'entrée va dans `registre/registre.jsonl` avec l'empreinte du commit de pré-enregistrement, et dans `registre/parking.md` si INDÉCIDABLE, avec sa condition de réouverture.
+
+Les autres scripts : `campagne_nouvelle.py` (squelette et gabarit), `greffier_aveugler.py` (A/B par tirage au sort, clé scellée jusqu'au verdict), `greffier_echantillon.py` (dix faits au hasard pour l'audit mensuel). `registre/erreurs.md` est amorcé avec les six erreurs connues et leur test.
+
+### Comment lancer une campagne
+
+Depuis une session Claude Code **en local sur le poste de Nicolas**, dans ce dépôt :
+
+```
+python scripts/campagne_nouvelle.py 001 "nombres ronds — excès sur témoin décalé"
+# remplir 00_preenregistrement.md, puis :
+git add campagnes/001 && git commit -m "Pré-enregistrement 001" && git push     # P1 scellée
+```
+
+Puis, dans l'ordre du cycle hebdomadaire, demander à la session principale de déléguer :
+1. « Lance l'agent **constructeur** sur la campagne 001. » (mardi, mercredi)
+2. « Lance l'agent **verificateur** sur la campagne 001. » (jeudi) — il ne verra pas `resultats/`.
+3. `python scripts/greffier_aveugler.py 001`, puis « Lance l'agent **juge** sur la campagne 001. » (vendredi matin, **lancé par Nicolas**).
+4. `python scripts/greffier_publier.py 001` — refuse ou inscrit.
+5. « Lance l'agent **rapporteur** pour la fiche du vendredi. »
+
+Ce qui n'est pas encore fait, et qui est de l'ordre du dev : le recalcul des poches S02/S03 (temps 1 de l'analyse du 13/10) comme première campagne sous cette organisation ; et les deux tests « à écrire » du registre des erreurs (E-002, E-004), qui demandent le code du laboratoire OneDrive.

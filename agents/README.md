@@ -1,10 +1,15 @@
 # Consignes des rôles
 
-Cinq rôles, quatre fichiers (l'Arbitre est Nicolas, sans consigne). Voir `docs/ORGANISATION_AGENTS_v1.md`.
+Les consignes exécutables vivent dans `.claude/agents/` (une seule source, versionnée). Ce dossier ne garde que ce renvoi.
 
-- `R1_constructeur.md`
-- `R2_verificateur.md` — ne voit jamais les résultats chiffrés
-- `R3_juge.md` — salle blanche, étiquettes aveugles, lancé par Nicolas
-- `R4_greffier.md` — registre, parking, script de publication
+| rôle | fichier | modèle | tâche |
+|---|---|---|---|
+| Constructeur | `.claude/agents/constructeur.md` | `claude-sonnet-5-5` | dev |
+| Vérificateur critique | `.claude/agents/verificateur.md` | `claude-opus-5-5` | analyse |
+| Juge (salle blanche) | `.claude/agents/juge.md` | `claude-opus-5-5` | analyse + recalcul |
+| Greffier | `.claude/agents/greffier.md` | `claude-sonnet-5-5` | dev (scripts) |
+| Rapporteur pour l'Arbitre | `.claude/agents/rapporteur.md` | `claude-opus-5-5` | analyse |
 
-Chaque consigne est datée et versionnée ici. Une consigne qui vit dans la mémoire d'un assistant n'existe pas.
+L'Arbitre est Nicolas. Le Rapporteur ne décide rien : il prépare la fiche du vendredi.
+
+Les murs entre rôles sont tenus par `.claude/hooks/murs.py`, enregistré dans `.claude/settings.json`. Voir `docs/ORGANISATION_AGENTS_v1.md` §7.

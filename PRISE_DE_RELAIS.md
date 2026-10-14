@@ -17,6 +17,7 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 | `docs/CATALOGUE_ACTEURS_FORCES_v0.2.md` | 8 acteurs forcés, 3 familles de niveaux, protocole de mesure, sources de données. Remplace la v0.1, non conservée. |
 | `docs/NOTE_REFLEXION_2026-09-19_session2.md` | note de la session 2 : le piège du critère de jugement, le budget de puissance des nombres ronds, la source Myfxbook. |
 | `docs/PROTOCOLE_ADDENDA_2026-09-19.md` | règles à inscrire au protocole, séparées en acceptées et proposées. |
+| `.claude/agents/`, `.claude/hooks/murs.py`, `scripts/greffier_*.py`, `campagnes/`, `registre/` | **l'organisation implémentée** (14/10) : cinq agents Claude Code (Sonnet 5.5 pour le dev, Opus 5.5 pour l'analyse), murs mécaniques par hook, portes P1 à P5 par script, registre des erreurs amorcé. Mode d'emploi : `docs/ORGANISATION_AGENTS_v1.md` §7. |
 | `docs/ORGANISATION_AGENTS_v1.md`, `agents/` | **l'organisation** : cinq rôles (Constructeur, Vérificateur critique qui ne voit pas les résultats, Juge en salle blanche à étiquettes aveugles, Greffier, Arbitre), les murs, le cycle hebdomadaire, et les consignes réelles dans `agents/`. Réponse à la seconde proposition du 14/10 (réduire les agents) en §0. |
 | `docs/METHODE_FIABILITE_v1.md` | **la méthode** : pourquoi les modèles se plantent (six mécanismes), le vocabulaire des quatre verdicts qui empêche de fermer trop vite, sept portes mécaniques, comment le système apprend, d'où viennent les pistes, l'organisation. Lecture du plan externe du 14/10 en §7. |
 | `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` | lecture du rapport d'audit du 13/10, les trois causes non nommées, proposition de sortie en quatre temps. |
@@ -39,7 +40,7 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 
 ## À l'arbitrage de Nicolas
 
-Ajouté le 14/10, méthode (voir `docs/METHODE_FIABILITE_v1.md` §8) : changer la consigne de fin de tour des agents ; adopter les quatre verdicts et requalifier les fermetures du rapport ; script de publication qui vérifie les portes ; dix erreurs du registre transformées en tests ; fiche du vendredi.
+Ajouté le 14/10, méthode (voir `docs/METHODE_FIABILITE_v1.md` §8) : **fait** — consignes de fin de tour dans les cinq agents, script de publication avec portes, six erreurs au registre dont deux tests ; **reste** — requalifier les fermetures du rapport avec les quatre verdicts, écrire les tests E-002 et E-004 (code OneDrive nécessaire), première fiche du vendredi.
 
 Ajouté le 14/10 (voir `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` §5) :
 
