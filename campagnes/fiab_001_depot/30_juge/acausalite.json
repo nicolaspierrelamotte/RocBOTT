@@ -1,0 +1,33 @@
+{
+  "n_changed": 0,
+  "n_checked": 800,
+  "changed_at": [],
+  "detail": {
+    "c1_brut_add": {
+      "n_checked": 80,
+      "n_changed": 0
+    },
+    "c1_brut_mul": {
+      "n_checked": 80,
+      "n_changed": 0
+    },
+    "c2_centre_3pct_add": {
+      "n_checked": 120,
+      "n_changed": 0
+    },
+    "c2_centre_1pct_mul": {
+      "n_checked": 120,
+      "n_changed": 0
+    },
+    "c5_add": {
+      "n_checked": 200,
+      "n_changed": 0
+    },
+    "c5_comp": {
+      "n_checked": 200,
+      "n_changed": 0
+    }
+  },
+  "instrument": "détecteur maison (principe de lab.acausality.detect_leak : futur remplacé par du bruit, 3 tirages par instant) ; detect_leak non appelé car son interface exige lab.synthetic.Bars / continue_with_noise, non lus",
+  "hors_decision": "le centrage (chiffres 1-2) et le bootstrap lisent tout l'échantillon par construction : ce n'est pas une décision simulée, c'est la définition de la mesure"
+}

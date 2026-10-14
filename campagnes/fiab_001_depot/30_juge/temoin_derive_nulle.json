@@ -1,0 +1,9 @@
+{
+  "t": 1.0704147050710185e-15,
+  "definition": "t de Student du rendement moyen des journées centrées (chiffre 1 : 20 x 8000 ; chiffre 2 : 20 x 20000 au risque 0,25 %), poolées",
+  "n_journees": 560000,
+  "max_abs_t_par_echantillon": 4.543176316685156e-15,
+  "temoin_chaine_c1_add_centre_z_P_moins_0.5": 0.5311622476544741,
+  "temoin_chaine_c2_add_0.25pct_z_P10_moins_0.5": 0.41012193308824657,
+  "instrument": "calcul maison ; lab.control.zero_drift_control non applicable (pipeline à signal sur barres lab.synthetic, sans objet pour un bootstrap de journées)"
+}
