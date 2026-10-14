@@ -6,6 +6,8 @@ Taxonomie utilisée : celle de la consigne du Vérificateur. M1 fuite du futur, 
 
 Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
 
+Revue de nuit du 14/10/2026 : lignes « revue nuit » sous O-1 à O-10, section « Revue de nuit » (F-1 et décompte) et objections O-25 à O-32 en fin de fiche. `fusion.md` m'est refusé par le mur : la correspondance F-n ↔ O-n vient de `registre/erreurs.md` (E-007 à E-017). Rien n'a été exécuté, cette fois non plus.
+
 ---
 
 ### O-1 — P3 teste le R brut, pas l'écart au R attendu : le péage masque une fuite
@@ -14,7 +16,8 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
 - gravité : haute
 - ce que ça fausse : `t = r.mean() / (sd/√n)` est calculé sur le R moyen brut. L'espérance sous dérive nulle est `-spread_bp/stop_bp` (l.88), mais P3 compare `|t|` à 3 sur ce t brut. Deux conséquences. (a) Un pipeline juste avec péage voit t tendre vers −∞ quand n croît, et P3 le refuse comme « bug de chaîne ». Pour passer P3, il faut faire tourner le témoin sans péage, c'est-à-dire sur une autre chaîne que celle qui est mesurée. (b) Une fuite qui fabrique environ +spread/stop de R (1 bp de péage sur un stop de 15 bp : 0,067 R) ramène t vers 0 et passe P3. Le test du dépôt vérifie `excess_over_spread`, jamais le `t` que lit la porte.
 - le test qui la rendrait impossible : un témoin avec péage > 0 sur un pipeline propre passe P3 ; le même pipeline avec une fuite plantée de +spread/stop R est refusé par P3.
-- état : ouverte
+- revue nuit : résolue — P3 ne lit plus le t du R brut. La porte juge `t_excess`, écart au R attendu (`scripts/greffier_publier.py:191-210`). Ce R attendu est rejoué par la même mécanique, péage compris (`lab/control.py:166-198, 220-266`). Les deux moitiés du test demandé existent, et chacune échouerait si l'on revenait au t brut : `tests/test_colibri_reproduction.py::test_spread_does_not_mask_a_leak_and_does_not_condemn_a_clean_pipeline` côté instrument, `tests/test_portes.py::test_p3_juge_l_ecart_au_r_attendu_pas_le_r_brut` côté porte. Réserve : le dosage de la fuite du test (10 % des décisions) a été choisi après avoir vu la ligne (journal, E3) ; c'est une borne de non-régression, pas une mesure de puissance. La même correction ouvre O-25 (la référence reprend les instants du signal) et O-28 (référence à sens équiréparti contre swaps asymétriques) : deux autres voies vers ce même mécanisme.
+- état : ouverte (revue de nuit : résolue pour le péage scalaire ; fermeture à prononcer par écrit par le Constructeur, ou par Nicolas)
 
 ### O-2 — Le détecteur et le témoin ne voient que ce qui transite par l'argument `bars`
 - fichier:ligne : `lab/acausality.py:7-9, 55, 66-67` ; `lab/control.py:74-83, 123-128` ; `tests/test_colibri_reproduction.py:38-46`
@@ -25,7 +28,8 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   La sélection des paramètres n'est jamais rejouée : une constante choisie après coup (M3) passe P4.
   Enfin, rien dans `lab/` ne construit `decide` à partir d'un `Pipeline`. `Pipeline.population_filter` est appliqué dans `simulate_trades` (control.py:82), mais il n'entre dans `decide` que si l'auteur le recompose à la main (le test le fait, test_colibri:38-46). Un `decide = pipeline.signal` sans filtre passe P4 avec le filtre de Colibri en place. La docstring (« Toute la chaîne … doit passer par cette fonction ») est une consigne, pas une vérification.
 - le test qui la rendrait impossible : un `decide` qui lit par fermeture `np.roll(signal_parfait, -1)`, calculé hors de `bars`, donne n_changed > 0 ; un `decide` dérivé mécaniquement d'un `Pipeline` qui contient `outside_bar_filter` donne n_changed > 0 sans recomposition manuelle.
-- état : ouverte
+- revue nuit : partielle — Fermé : signal et filtre ne se composent plus qu'en un endroit (`lab/simulate.py:66-95`), que `simulate_trades` et `Pipeline.decide` appellent. `detect_leak` reçoit le `Pipeline`, et `detect_trade_leak` rejoue la boucle exécutée. La seconde moitié du test demandé existe et échouerait si `decide` redevenait le signal seul (`test_detector_called_on_the_pipeline_flags_acausal_filter_and_clears_causal_one`, `test_pipeline_decide_is_what_simulate_trades_executes`). Ouvert, et c'est le titre de l'objection : seules les barres sont remplacées, ce que `lab/acausality.py:22-27` reconnaît. La première moitié du test (fermeture sur un tableau décalé, calculé hors de `bars`) n'existe pas. Les paramètres choisis sur tout l'historique ne sont pas rejoués. Le témoin reste muet sur un signal qui lit des données réelles. `detect_leak` accepte encore un appelable nu (`pipeline.signal`), et P4 ne peut pas savoir lequel on lui a passé. Rien dans `scripts/` n'appelle `write_acausalite_json`.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-3 — P3 et P4 acceptent des entrées dégénérées ou écrites à la main
 - fichier:ligne : `scripts/greffier_publier.py:56-67` ; `lab/control.py:86-87` ; `lab/acausality.py:58-61` ; `tests/test_organisation.py:96-97`
@@ -37,7 +41,13 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   (c) `detect_leak` renvoie `LeakReport(0, 0)` s'il n'y a aucune décision non nulle, et `n_checks` peut valoir 1. P4 ne lit que `n_changed`.
   (d) Aucun lien entre le JSON et ce qui a été mesuré : pas d'empreinte du pipeline, de `decide`, des barres, de la graine ni de `sigma_bp`. La fixture du test écrit `{"t": 0.4}` et `{"n_changed": 0}` à la main, et la publication passe. N'importe quel script lancé en Bash peut écrire ces fichiers (O-15).
 - le test qui la rendrait impossible : P3 refuse `{"t": NaN}` et refuse un témoin dont n_trades est sous un minimum déclaré ; P4 refuse n_checked = 0 ; les deux refusent un JSON dont l'empreinte de pipeline diffère de celle du code mesuré.
-- état : ouverte
+- revue nuit : partielle — (a) NaN et (c) `n_checked = 0` : refusés par la porte (`scripts/greffier_publier.py:191-229`) et par le producteur (`lab/control.py:269-343`). Les tests `test_p3_refuse_les_entrees_degenerees`, `test_p4_refuse_les_entrees_degenerees` et `tests/test_lab_pieces.py` échoueraient sur l'ancien code. (b) Plancher : 30 trades à la porte (`greffier_publier.py:39`) contre 500 chez le producteur (`lab/control.py:277`). À 30 trades, une fuite de 0,3 R reste sous |t| = 3. (d) Non fermé, car `pipeline` n'est contrôlé que non vide :
+  - le dossier « sain » des tests est lui-même un JSON écrit à la main (`TDN`, `AC` : `"pipeline": "colibri_v1"`, `tests/test_portes.py`), et `test_dossier_sain_passe` exige qu'il passe ;
+  - P3 et P4 ne comparent pas leurs deux champs `pipeline` ;
+  - l'empreinte (`_fn_id`, `lab/control.py:63-72`) ne couvre ni les fonctions que le signal appelle ni les valeurs qu'il capture : le test doit renommer `__qualname__` pour distinguer deux dosages de fuite (`partial_future_signal`) ;
+  - un tableau de demi-écarts n'est identifié que par sa longueur ;
+  - aucune empreinte de barres ni de `sigma_bp`.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-4 — Stop exécuté exactement au niveau : le simulateur ne préserve pas la martingale
 - fichier:ligne : `lab/simulate.py:59-67` ; `lab/synthetic.py:46, 57-65` ; `lab/control.py:88`
@@ -53,7 +63,8 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   - la règle « stop prioritaire » dans une barre ambiguë tire en sens inverse et peut masquer une petite fuite positive.
   Le détecteur d'acausalité ne regarde pas l'exécution : il ne peut pas voir ce biais.
 - le test qui la rendrait impossible : un témoin à dérive nulle, sans péage, stop 10 / objectif 30, sur au moins 10⁵ trades, donne |R moyen| < 3 erreurs-types ; et, trade par trade, le prix crédité est égal au prix du chemin intra-barre au pas du déclenchement (le générateur le connaît).
-- état : ouverte
+- revue nuit : partielle — Fermé : le zéro du témoin n'est plus −péage/stop, il est rejoué (`expected_r_under_null`). Un stop sur gap est soldé à l'ouverture (`lab/simulate.py:139-142`). Les tests échoueraient si l'on revenait en arrière : `test_stop_on_a_gap_fills_at_the_open_not_at_the_level`, `test_asymmetric_stop_and_target_zero_drift_has_no_significant_excess[10-30 et 30-10]`. Ouvert : à l'intérieur d'une barre, le stop est toujours soldé exactement au niveau. Le biais de dépassement n'est pas supprimé : il est absorbé par la référence du témoin. Il reste donc entier dans tout R produit sur données réelles, où il ne dépend que d'un `stop_slippage_bp` scalaire fixé par l'appelant (une moyenne, pas l'instant : M4). Le test demandé échoue toujours sur le code corrigé : à dérive nulle, sans péage, stop 10 / objectif 30, le R brut moyen n'est pas nul, et un test l'exige désormais (O-32). Le second test (prix crédité = prix du chemin au pas du déclenchement) n'existe pas. Le niveau du biais dépend encore de `steps_per_bar = 20`.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-5 — Péage scalaire, déclenchements sur une seule série de prix, pas de swap
 - fichier:ligne : `lab/simulate.py:5-7, 39, 52-53, 60-61, 70`
@@ -64,7 +75,13 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   Le financement (swap) des positions qui traversent le rollover n'est pas compté.
   « Retiré une fois » n'est juste que si `spread_bp` désigne l'écart complet, et ce n'est écrit nulle part.
 - le test qui la rendrait impossible : sur des barres bid et ask réelles, le R simulé par `simulate_trades` est égal, à une tolérance déclarée d'avance, au R recalculé trade par trade avec l'écart et le swap de l'instant de chaque entrée, sortie et déclenchement.
-- état : ouverte
+- revue nuit : partielle — Fermé sur barres écrites à la main : un demi-écart à chaque côté, déclenchements sur le bid pour un long et sur l'ask pour un court, swap signé par sens (`lab/simulate.py:116-156`). Les tests de `tests/test_lab_execution.py` échoueraient sur l'ancien code. Ouvert :
+  - le test demandé (R simulé contre R recalculé sur barres bid et ask réelles) n'existe pas ;
+  - rien ne vérifie que les barres fournies sont des barres médianes, alors que MT4 et MT5 livrent du bid ;
+  - le swap est facturé par barre tenue, pas au rollover : une position intrajournalière paie un swap qui n'existe pas, et le mercredi triple est lissé. Le coût reste une moyenne, pas celui de l'instant ;
+  - un demi-écart donné barre par barre ne dit pas à quel instant de la barre il correspond, alors que l'entrée se fait à l'ouverture, là où l'écart est le plus large.
+  Défauts ouverts par la correction : O-28, O-30.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-6 — Le « seuil de détection » est un tirage unique, sans lien avec la taille réelle de l'échantillon
 - fichier:ligne : `lab/control.py:11-13, 100-144` ; `lab/synthetic.py:83-89` ; `tests/test_power.py:12, 17`
@@ -78,7 +95,12 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   (e) Le signal est recalculé sur les barres déformées. Là où il diffère du signal brut, l'avantage est planté à contresens : c'est conservateur, mais la quantité retrouvée n'est plus x.
   La MDE alimente P2 et la règle « TUÉ sans MDE refusé » (E-005) : un seuil optimiste fabrique de faux TUÉ.
 - le test qui la rendrait impossible : au moins 200 répétitions indépendantes par avantage, avec publication du taux de détection ; la MDE est le plus petit avantage détecté dans au moins 80 % des cas, sur un synthétique qui a le même nombre de barres et de trades que l'échantillon réel.
-- état : ouverte
+- revue nuit : partielle (F-8 partielle, F-11 partielle) —
+  - (a) Fermé : `power_curve` répète `n_reps` tirages indépendants et rend une probabilité de détection avec son intervalle de Wilson ; `minimum_detectable_edge` exige au moins 0,8 et la monotonie. Les tests échoueraient si la répétition ou `n_trades` étaient ignorés (`0.02 < p < 0.98`, `test_power_grows_with_the_number_of_trades`).
+  - (b) Ouvert : `n_trades` est un argument libre. Rien n'impose qu'il soit le nombre de trades de l'échantillon réel, et P2 ne vérifie qu'un chiffre dans un texte. Les bornes des tests ont été fixées après avoir vu la courbe (journal, E2).
+  - (c) et (d) Corrigés dans le code (`lab/control.py:374-440`) : la dérive suit la position, dans son sens, sans saut à l'ouverture. Mais aucun test ne protège (c) : le contrôle « aucune dérive hors position » ne porte que sur les barres antérieures au premier trade, une ou deux avec un suiveur de barre. Réintroduire de la dérive entre deux trades ne ferait échouer aucun test (O-31).
+  - (e) Sans objet pour un pipeline causal : le signal est évalué sur un préfixe.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-7 — Perte journalière et perte maximale jugées sur la clôture du jour, pas sur l'équité intra-journalière
 - fichier:ligne : `lab/ftmo.py:6-7, 39-41, 56-63`
@@ -89,7 +111,12 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   La frontière de journée n'est imposée nulle part : `daily_returns` arrive déjà agrégé, sur un fuseau que la fonction ignore (M5).
   C'est la même famille que E-002, toujours « à écrire » : une décision du modèle de compte prise sur la clôture de fin de journée.
 - le test qui la rendrait impossible : un jour synthétique dont le creux intra-journalier est −6 % et la clôture −2 % produit une violation de la perte journalière. Aujourd'hui, la fonction n'a aucune entrée pour recevoir ce creux.
-- état : ouverte
+- revue nuit : partielle — La fonction reçoit maintenant `daily_low`. Elle le teste avant la clôture (perte journalière, puis perte maximale statique, `lab/ftmo.py:99-104`) et le rééchantillonne avec la clôture. Le test demandé existe et échouerait sans cette entrée (`test_a_day_closing_at_minus_3_but_touching_minus_6_fails_the_5_percent_rule`, `test_intraday_low_breaches_the_static_max_loss_even_if_the_close_recovers`). Ouvert :
+  - par défaut, seule la clôture est jugée, et aucun code du dépôt ne calcule `daily_low` ;
+  - `two_step_pass_probability` renvoie un flottant sans `equity_basis` (`lab/ftmo.py:144`) : le majorant perd son étiquette dès qu'on l'imprime ;
+  - la frontière de journée (fuseau, minuit CE(S)T chez FTMO) n'est ni imposée ni vérifiée (M5) ;
+  - E-002 reste sans test.
+- état : ouverte (revue de nuit : partielle)
 
 ### O-8 — La porte P1 ne prouve pas l'antériorité
 - fichier:ligne : `scripts/greffier_publier.py:33-50` ; `tests/test_organisation.py:121-125`
@@ -103,7 +130,13 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   (e) Surtout, P1 compare au verdict, pas à la première mesure. Un pré-enregistrement commité après que le Constructeur a vu ses résultats (`10_constructeur/resultats`), mais avant que le Juge écrive verdict.md, passe. La promesse du gabarit (« AVANT toute mesure ») n'est pas ce que la porte vérifie.
   Le hook n'empêche pas la réécriture par Bash (O-15).
 - le test qui la rendrait impossible : P1 refuse si le contenu de travail diffère du blob commité ; P1 refuse si un fichier de résultats ou un JSON de 30_juge a un commit antérieur à celui du pré-enregistrement ; la comparaison se fait entre commits, jamais avec un mtime.
-- état : ouverte
+- revue nuit : partielle —
+  - (a) Fermé : le texte du disque est comparé au blob du premier commit, même après un nouveau commit (`scripts/greffier_publier.py:94-104`, `test_p1_refuse_un_texte_modifie_puis_recommite`).
+  - (b) Fermé : plus de mtime (`test_p1_ignore_le_mtime_du_disque`).
+  - (c) Atténué : l'ascendance s'ajoute à la date, mais un historique réécrit puis poussé de force passe.
+  - (d) Fermé : c'est le premier commit.
+  - (e) Ouvert. L'antériorité est vérifiée contre le premier COMMIT des fichiers de `10_constructeur/resultats/` et de `30_juge/`, et un fichier non commité est sauté (l. 117-118). Le dossier « sain » des tests publie avec tous ses résultats et son verdict non commités (`test_dossier_sain_passe`). Un résultat vu mais commité plus tard n'est jamais comparé, pas plus qu'un résultat écrit ailleurs (`reponses_*.md`, `journal_essais.md`, `docs/`, sortie d'un script). La publication n'exige pas que le verdict soit commité. La promesse « AVANT toute mesure » n'est toujours pas ce que la porte vérifie (voir O-26).
+- état : ouverte (revue de nuit : partielle)
 
 ### O-9 — Les murs de lecture tombent sur un Grep ou un Glob ordinaire
 - fichier:ligne : `.claude/hooks/murs.py:22-23, 48-55, 79-87` ; `tests/test_organisation.py:28-40`
@@ -118,7 +151,15 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   Rien de cela ne demande d'intention : un Grep du nom d'une fonction à la racine suffit. Les tests ne couvrent que le chemin direct.
   Enfin, `/docs/`, qui porte les chiffres publiés, n'est pas interdit au Vérificateur. Et le registre comme le pré-enregistrement, qu'il doit lire, contiennent des chiffres de résultat : +0,1079 R ; 0,31 à 0,83 ; 0,50 ; le commentaire de `tests/test_ftmo.py` donne 0,62.
 - le test qui la rendrait impossible : pour chaque rôle, un Grep et un Glob lancés sur la racine du dépôt et sur celle de la campagne, avec `path` relatif et avec `glob`, ne renvoient aucune ligne d'un fichier interdit ; le mur tranche sur le chemin résolu de chaque fichier touché.
-- état : ouverte
+- revue nuit : partielle — Les contournements nommés sont fermés :
+  - périmètre effectif de Grep (le `cwd` si `path` est absent) et parcours du disque ;
+  - `..` et liens symboliques résolus, chemin relatif résolu contre le `cwd` ;
+  - paramètres `glob` et `type` inspectés, Glob réduit à sa partie littérale (`.claude/hooks/murs.py:254-330`).
+  Je l'ai constaté sur moi-même : trois Glob (racine de la campagne, `10_constructeur`, `20_verificateur`) m'ont été refusés. Les tests de `tests/test_murs.py` lancent le hook en sous-processus ; à leur lecture, ils échoueraient sur l'ancien hook. `/docs` est fermé au Vérificateur. Ouvert :
+  - le dernier paragraphe : les chiffres restent dans les pièces que le Vérificateur doit lire (`registre/erreurs.md` : +0,1079 R ; le pré-enregistrement : 0,31 à 0,83 et 0,50). La nuit en a ajouté : `reponses_lot_A.md` et `journal_essais.md`, lecture imposée pour cette revue, portent des valeurs mesurées des instruments ;
+  - un Grep dont le `path` est `.git` n'est pas refusé (`murs.py:273` n'exclut `.git` que comme sous-dossier) : journaux et messages de commit lisibles ;
+  - les tests lisent une sortie vide comme « autorisé » : un hook qui plante laisse passer (O-16).
+- état : ouverte (revue de nuit : partielle)
 
 ### O-10 — Le pré-enregistrement de cette campagne ne fixe ni ses constantes ni son critère de reproduction
 - fichier:ligne : `campagnes/fiab_001_depot/00_preenregistrement.md:12, 15, 19`
@@ -130,7 +171,12 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
   - La prédiction secondaire (« retrouver la dispersion 0,31 à 0,83 et le retour à 0,50 ») n'a pas de tolérance, alors que la dispersion dépend de constantes non nommées : horizon `max_days`, longueur et nombre d'échantillons, graine (O-13).
   Chaque verdict REPRODUIT ou ÉCART peut donc être choisi après avoir vu le chiffre du Juge.
 - le test qui la rendrait impossible : le pré-enregistrement commité contient, pour chaque chiffre, la valeur publiée, une tolérance chiffrée et l'empreinte de spec.md ; P1 refuse si spec.md ne correspond plus à cette empreinte.
-- état : ouverte
+- revue nuit : non résolue — Ce qui a été fait :
+  - P1 exige l'empreinte sha256 de `spec.md` et de `chiffre_scelle.txt`, et refuse une pièce modifiée après le scellé (`test_p1_refuse_une_piece_modifiee_apres_le_scelle`) ;
+  - le gabarit porte une section « Tolérances ».
+  Ce qui reste : le défaut est le texte de CETTE campagne, et ce texte n'a pas changé. Il n'a toujours ni constantes, ni intervalle de REPRODUIT, ni tolérance pour la prédiction secondaire. La section « Tolérances » n'est pas un champ obligatoire de P1 (`CHAMPS_P1`, `scripts/greffier_publier.py:35`) : une campagne future peut encore s'en passer.
+  P1 refusera fiab_001_depot, faute d'empreinte. La seule voie de publication est un `00_preenregistrement_v2.md` écrit maintenant, après les mesures du Juge et des Constructeurs : il fixerait l'intervalle en connaissant le chiffre. P1 ne l'arrêterait que si un fichier de résultat avait déjà été commité (O-26). Et la nuit a déjà écrit, dans le script même dont on reproduit les chiffres, un intervalle à t = 3,6 autour de 0,50 (O-27).
+- état : ouverte (revue de nuit : non résolue)
 
 ### O-11 — Le détecteur ne regarde que la décision d'entrée à t, convertie en entier
 - fichier:ligne : `lab/acausality.py:58, 67` ; `lab/synthetic.py:17, 101`
@@ -284,3 +330,121 @@ Les ordres de grandeur donnés en O-4 et O-6 sont raisonnés, pas mesurés.
 - Pour les données réelles : `simulate_trades` y a-t-il tourné, sur des barres bid ou mid, avec quel `spread_bp` ?
 - `30_juge/entrees/spec.md`, qui m'est interdit.
 - Sans exécution, les ordres de grandeur de O-4 et O-6 restent des estimations.
+
+---
+
+## Revue de nuit (14/10/2026) — périmètre, F-1, décompte
+
+Lu : `10_constructeur/diff_nuit.patch` en entier ; l'état actuel de `lab/control.py`, `lab/simulate.py`, `lab/acausality.py`, `lab/synthetic.py`, `scripts/chiffres_note_session2.py`, `scripts/greffier_publier.py` (l. 35-210), `.claude/settings.json` ; par recherche, `lab/ftmo.py`, `.claude/hooks/murs.py`, `.claude/agents/juge.md` et `greffier.md` ; `00_preenregistrement.md`, `journal_essais.md`, `reponses_lot_A.md`, `reponses_lot_B.md`, `reponses_lot_C.md`, `reponses_reconciliation.md`. Refusé par le mur : `20_verificateur/fusion.md`. Rien n'a été exécuté. Les valeurs chiffrées que citent les Constructeurs ne servent nulle part de preuve ci-dessus : chaque jugement porte sur le code et sur la lecture des tests.
+
+Correspondance utilisée : F-1 = S-4 (pas d'entrée ici) ; F-2 = O-2 ; F-3 = O-3 ; F-4 = O-4 ; F-5 = O-1 ; F-6 = O-10 ; F-7 = O-5 ; F-8 = O-6 (a, b) ; F-9 = O-8 ; F-10 = O-9 ; F-11 = O-6 (c à e) ; F-12 = O-7.
+
+**F-1 (S-4) — mur de lecture du Juge.** Pas d'entrée O-n ici ; la fiche d'origine est celle de Sonnet, je n'en tiens pas l'état.
+- revue nuit : partielle — Fait : le Juge ne lit plus `lab/`, `tests/`, `registre/`, `docs/`, ni `00_preenregistrement*` (`.claude/hooks/murs.py`, table `INTERDIT_LECTURE`). C'est testé par `test_f1_le_juge_ne_lit_ni_lab_ni_tests_ni_registre_ni_prereg_ni_docs`, qui échouerait sur l'ancien hook. Ouvert :
+  1. `scripts/` reste lisible et exécutable par le Juge. Or `scripts/chiffres_note_session2.py` est la recette complète des chiffres qu'il doit retrouver « depuis la prose, sans voir lab/ftmo.py » : graines, `n_boot`, `max_days`, tailles. `python3 scripts/chiffres_note_session2.py` ne nomme pas `lab` et passe le mur (`controle_bash`, règle 4), alors que le script importe `lab.ftmo` et imprime le chiffre cible. Depuis cette nuit, son docstring écrit aussi la cible (O-27).
+  2. Quand ni `ROCBOTT_CAMPAGNE` ni le `cwd` ne désignent la campagne, `lab/` s'ouvre au Juge dès qu'une campagne quelconque l'ouvre (union), et un test l'exige (O-29).
+  3. `.claude/agents/juge.md:19, 29` dit encore au Juge que `lab/` est à sa disposition, et lui fait produire P3 et P4 avec `lab.control` et `lab.acausality`, ce que le mur refuse (O-29).
+  4. Ne sont pas vus : `git log -p`, `git show <rev>` sans chemin, les outils MCP.
+  5. `suivi/`, `idees/` et la racine restent lisibles : c'est une liste d'interdits, pas une liste de permis.
+
+**Décompte des 12 hautes F-1 à F-12** : 1 résolue (F-5) ; 10 partielles (F-1, F-2, F-3, F-4, F-7, F-8, F-9, F-10, F-11, F-12) ; 1 non résolue (F-6). Je n'en ferme aucune : leur `état` reste « ouverte », avec le résultat de la revue entre parenthèses.
+
+**Nouvelles objections (ci-dessous)** : 3 hautes (O-25, O-26, O-27), 2 moyennes (O-28, O-29), 3 basses (O-30, O-31, O-32).
+
+**Celle qui, seule, empêcherait de faire confiance aux instruments : O-25.** Le témoin a été reconstruit cette nuit. Il calcule désormais son zéro sur les instants de décision du pipeline lui-même. Toute fuite qui choisit QUAND trader en lisant le futur sans dépendre du sens est donc absorbée dans le R attendu. L'ancien témoin la voyait ; aucun test ne l'exerce. C'est une haute sur `lab/control.py`, donc la clause « Ce qui tuerait » du pré-enregistrement.
+
+---
+
+## Nouvelles objections (revue de nuit)
+
+### O-25 — Le R attendu du témoin reprend les instants de décision du signal : une fuite de calendrier y est absorbée
+- fichier:ligne : `lab/control.py:185-192` (`base = np.sign(pipeline.signal(bars))`, pile ou face, `run_trades(..., signal=base * coin)`), `lab/control.py:21-29`, `lab/control.py:247, 261` ; `tests/test_colibri_reproduction.py` (seules la voie « filtre » et une fuite de sens y sont exercées)
+- mécanisme : M1
+- gravité : haute
+- ce que ça fausse : la référence remplace le sens par pile ou face, mais garde QUAND le signal trade. Supposons un signal qui choisit ses instants en lisant le futur, sans que cela dépende du sens : ne trader que si l'étendue de la barre d'entrée reste sous la distance du stop ; un ATR ou une volatilité calculés avec la barre t+1 ; un régime estimé avec anticipation.
+  Le R qu'une telle fuite fabrique ne dépend pas du sens : il vient des conventions d'exécution, que la référence rejoue aux mêmes instants. Exemple à stop = objectif : une barre qui touche les deux niveaux solde −1 R pour un acheteur comme pour un vendeur, puisque le stop est prioritaire. Écarter ces barres en lisant l'avenir relève le R des deux sens. `expected_r` monte d'autant, `t_excess` reste près de zéro, P3 passe. L'ancien témoin (R brut contre 0, stop = objectif, sans péage) sonnait sur ce cas.
+  Le docstring tient ce raisonnement pour le filtre, d'où `reference_filter="none"`, mais pas pour le signal. La même lecture y est pourtant possible : il suffit d'y déplacer la condition.
+  Le test du dépôt ne peut pas révéler l'absorption. Le gain du filtre de Colibri dépend du sens relatif à la barre t : pour un suiveur, une barre externe d'entrée est surtout une perte ; pour le sens opposé, surtout un gain. Une référence à sens tiré au sort ne l'absorbe donc pas, et le test passe pour une raison qui ne couvre pas ce cas.
+  Seul P4 voit encore cette classe de fuites, et seulement si la lecture passe par `bars` (O-2). Raisonné, non mesuré.
+- le test qui la rendrait impossible : un pipeline dont le signal suit la barre close mais vaut 0 quand l'étendue de la barre t+1 dépasse la distance du stop donne `t_excess > 3` dans `zero_drift_control` ; le R attendu est calculé sur des instants qui ne peuvent dépendre d'aucune barre postérieure à t.
+- état : ouverte
+
+### O-26 — Révision v2 : la plus récente fait foi, et son antériorité n'est vérifiée que contre des fichiers commités de deux dossiers
+- fichier:ligne : `scripts/greffier_publier.py:54-63, 110-126` (saut des fichiers non commités l. 117-118), `:158-188` (MDE et date lus dans la version la plus récente qui les déclare ; « chiffré » = contient un chiffre, l. 168 et 182) ; `scripts/_campagne.py` (`versions_preenregistrement`) ; `tests/test_portes.py::test_dossier_sain_passe` ; `tests/test_organisation.py::test_p2_un_v2_peut_chiffrer_un_mde_que_le_v1_disait_sans_objet`, `::test_p1_la_plus_recente_fait_foi_pour_les_empreintes`
+- mécanisme : M3
+- gravité : haute
+- ce que ça fausse : la nuit a créé une voie de révision légitime (`_v2`, `_v3`). La version la plus récente fixe :
+  - les empreintes : elle re-scelle un `spec.md` modifié après le v1 ;
+  - le MDE : un MDE « sans objet » devenu chiffré rend TUÉ possible ;
+  - la date de décision.
+  Son seul garde-fou est d'être commitée avant le premier commit de tout fichier de `10_constructeur/resultats/` et de `30_juge/`. Or un fichier non commité est sauté. Un résultat écrit ailleurs (`10_constructeur/reponses_*.md`, `journal_essais.md`, `docs/`, sortie d'un script) n'est pas regardé. Le verdict n'a pas à être commité pour publier.
+  Dans le flux par défaut, celui de la fixture des tests qui publie avec tout non commité, un v2 écrit après avoir vu les chiffres passe P1.
+  « Chiffré » signifie seulement « contient un chiffre » : « MDE : à calculer après 2026-10-16 » ouvre TUÉ.
+  Pour fiab_001_depot, c'est la seule voie de publication (P1 refuse le v1, sans empreinte), et ce v2 serait écrit après les mesures.
+- le test qui la rendrait impossible : P1 refuse dès qu'un fichier de `10_constructeur/` hors `code/`, ou de `30_juge/` hors pièces scellées, n'est pas commité ; une valeur de MDE sans nombre suivi d'une unité (R ou bp) n'est pas « chiffrée ».
+- état : ouverte
+
+### O-27 — Le script qui produit les chiffres à reproduire a été réécrit pendant la campagne : cible écrite, tolérance après coup, conclusion figée
+- fichier:ligne : `scripts/chiffres_note_session2.py:51-57` (docstring), `:83` (intervalle), `:84` (conclusion), `:87-101` et `:150` (§1.1 bis) ; `.claude/hooks/murs.py`, `INTERDIT_LECTURE["juge"]` (pas de `scripts/`) et `controle_bash` (l. 498 et suivantes : `python3 scripts/…` ne nomme pas `lab`)
+- mécanisme : M3 et M6
+- gravité : haute
+- ce que ça fausse : l'hypothèse de la campagne est que les chiffres de la note se reproduisent depuis la prose. Sa prédiction secondaire : « 0,31 à 0,83 et le retour à 0,50 », sans voir `lab/ftmo.py`. La nuit a modifié le script de référence de ces chiffres.
+  - Son docstring écrit la cible (« 0,31 / 0,59 / 0,83 », « 0,500 ») dans un fichier que le Juge peut lire. Le Juge peut aussi l'exécuter : la commande ne nomme pas `lab`, le mur la laisse passer, et elle imprime le chiffre cible. C'est la fuite de F-1, rouverte.
+  - Il calcule un « intervalle à t = 3,6 » autour de 0,50 pour la médiane : c'est la tolérance qui manquait au pré-enregistrement (O-10), écrite après la mesure. Le docstring le dit : « Corrigé le 15/10/2026 après la campagne fiab_001_depot », une date postérieure à celle de mon environnement (14/10 ; voir O-19).
+  - La conclusion « un tirage, pas un biais » est imprimée quel que soit l'écart calculé (l. 84) : c'est un verdict écrit dans le code, pas une mesure.
+  - Il ajoute une §1.1 bis à 20 000 rééchantillonnages, alors que le pré-enregistrement dit « Constantes : celles des notes. Aucune nouvelle ».
+  Aucune réponse des lots A, B, C ni de la réconciliation ne revendique ce changement. Je n'ai pas pu lire `fusion.md` pour savoir s'il répond à une F-n.
+- le test qui la rendrait impossible : à la publication, `git diff <commit du pré-enregistrement> -- scripts/chiffres_note_session2.py docs/` est vide ; aucun fichier que le Juge peut lire ou exécuter ne contient une valeur de `chiffre_scelle.txt` ; aucune ligne imprimée par un script ne porte un verdict indépendant de la valeur calculée.
+- état : ouverte
+
+### O-28 — Référence à sens équiréparti contre swaps asymétriques : le défaut de O-1 revient par le financement
+- fichier:ligne : `lab/control.py:190-192` (pile ou face 50/50) ; `lab/simulate.py:154-155` (swap selon le sens)
+- mécanisme : M4
+- gravité : moyenne
+- ce que ça fausse : la référence tire le sens à 50/50, le pipeline garde sa propre composition. Dès que `swap_long_bp ≠ swap_short_bp`, cas général sur CFD, le R attendu d'un pipeline à dominante acheteuse n'est pas celui de la référence. L'écart vaut (part acheteuse − ½) × (swap_short − swap_long) × barres tenues / stop. Conséquences :
+  - un pipeline propre, uniquement acheteur, voit `t_excess` dériver avec n, et P3 le refuse ;
+  - une fuite de cette taille passe.
+  C'est O-1, par le swap au lieu du péage. L'effet est faible sur barres intrajournalières (swap par barre minuscule), réel sur barres journalières.
+- le test qui la rendrait impossible : un pipeline propre, acheteur seulement, avec `swap_long_bp = 0,5` et `swap_short_bp = −0,2`, sur 10⁵ trades, donne |t_excess| < 3.
+- état : ouverte
+
+### O-29 — `lab/` et le Juge : ouverture par l'union des campagnes, et consigne du Juge contraire au mur
+- fichier:ligne : `.claude/hooks/murs.py:210-233` (union l. 223) ; `tests/test_murs.py::test_f1_lab_s_ouvre_au_juge_par_campagne_et_pas_pour_les_autres` ; `.claude/agents/juge.md:19, 29`
+- mécanisme : M6
+- gravité : moyenne
+- ce que ça fausse : sans `ROCBOTT_CAMPAGNE` et avec un `cwd` à la racine du dépôt (le cas ordinaire), le hook prend l'union des campagnes : le `murs.json` d'une seule campagne ouvre `lab/` à tout Juge. Le test l'exige (lecture libre avec `cwd` = racine, sans variable).
+  En face, `juge.md` demande au Juge de produire `temoin_derive_nulle.json` et `acausalite.json` avec `lab.control` et `lab.acausality`. Le mur les lui ferme sans `murs.json`, et ce fichier est absent pour fiab_001_depot (lecture directe : inexistant).
+  Il ne reste que deux issues :
+  - ouvrir `lab/`, ce qui l'ouvre à tous les Juges ;
+  - écrire P3 et P4 sans `lab/`, à la main, ce que la porte ne distingue pas (O-3 d).
+- le test qui la rendrait impossible : un Juge dont la campagne n'est pas désignée est refusé sur `lab/`, quel que soit le `murs.json` d'une autre campagne ; la consigne du Juge ne lui demande aucun appel que son mur refuse.
+- état : ouverte
+
+### O-30 — Demi-écart par barre appliqué par indice aux marches synthétiques
+- fichier:ligne : `lab/simulate.py:98-99` (`_half`) ; `lab/control.py:129` (`array{len}`), `:189-192`, `:240-241`, `:405`
+- mécanisme : M4
+- gravité : basse
+- ce que ça fausse : un `Pipeline` qui porte le demi-écart réel barre par barre l'emporte dans le témoin, dans la référence et dans le test de puissance. La barre synthétique k y reçoit l'écart de la barre réelle k : le profil horaire des coûts (ouverture de session, rollover) est appliqué à des instants qui n'en ont pas. Si la marche est plus longue que le tableau, une `IndexError` survient ; sinon, rien ne le signale. L'empreinte ne retient que la longueur du tableau : deux profils différents ont la même.
+- le test qui la rendrait impossible : `zero_drift_control` refuse un demi-écart en tableau, ou le témoin publie le profil appliqué et l'empreinte change quand une valeur du tableau change.
+- état : ouverte
+
+### O-31 — Test de puissance : « avantage réalisé » compté, pas mesuré ; « hors position » vérifié avant le premier trade seulement
+- fichier:ligne : `lab/control.py:426-436` (`planted.append(drift_per_held_bar_bp * (exit_bar - entry + 1))`) ; `tests/test_power.py::test_edge_is_planted_only_while_in_position_and_in_its_direction`, `::test_detection_probability_is_a_probability_over_many_draws_not_a_boolean` (assertion « réalisé ≈ nominal »)
+- mécanisme : M6
+- gravité : basse
+- ce que ça fausse : le docstring dit `realised_edge_bp` « mesuré ». C'est en fait la dérive par barre multipliée par le nombre de barres tenues :
+  - la barre de sortie compte entière, alors que le trade sort au stop ou à l'objectif en cours de barre ;
+  - la dérive continue après la sortie dans cette barre : « ni dérive hors du trade » est faux pour ce reste de barre ;
+  - comme la dérive par barre vaut `edge / durée moyenne nulle`, l'assertion « réalisé ≈ nominal à 10 % » vérifie surtout que la durée moyenne ne change pas : elle est presque tautologique.
+  Le contrôle « aucune dérive hors position » ne porte, de l'aveu du commentaire, que sur les barres antérieures au premier trade, soit une ou deux avec un suiveur de barre. Une régression qui planterait de la dérive entre deux trades passerait ce test.
+  Le MDE publié est un avantage nominal, plus grand que l'avantage reçu. C'est prudent pour TUÉ, mais l'étiquette « mesuré » est fausse.
+- le test qui la rendrait impossible : l'avantage réalisé est calculé à partir des prix, trade par trade, sur les mêmes pas avec et sans dérive ; le rendement de chaque barre hors position, y compris après le premier trade, est égal à celui de la marche sans avantage.
+- état : ouverte
+
+### O-32 — Un test fige le biais de dépassement que O-4 demandait de supprimer
+- fichier:ligne : `tests/test_lab_execution.py::test_asymmetric_stop_and_target_zero_drift_has_no_significant_excess` (`assert abs(res.t) > 4`, `assert abs(res.expected_r) > 0.02`)
+- mécanisme : M6
+- gravité : basse
+- ce que ça fausse : le test exige que le R brut s'écarte de zéro à dérive nulle, stop ≠ objectif, sans péage. Un simulateur qui solderait le stop au prix réel du franchissement, comme O-4 le demande, ferait échouer ce test. Le défaut est devenu une propriété protégée.
+- le test qui la rendrait impossible : l'assertion porte sur `t_excess` seulement ; l'écart du R brut est publié, pas exigé.
+- état : ouverte
