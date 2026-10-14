@@ -1,7 +1,7 @@
 # Fusion des objections — fiab_001_depot
 
 Sources : `objections.md` (Opus 5.5, 24 objections : O-1 à O-24) et `objections_bis.md` (Sonnet 5.5, 27 objections : S-1 à S-27). Les ids d'origine sont notés O-n (Opus) et S-n (Sonnet).
-Date de la fusion : 2026-10-14. Le Greffier ne tranche pas entre les deux : une objection portée par un seul reste une objection, avec la gravité que son auteur lui a donnée. Aucun état n'est modifié ici : toutes les lignes restent « ouverte » dans les fiches d'origine.
+Date de la fusion : 2026-10-14. Mise à jour de la revue de nuit : 2026-10-14 (nuit du 14 au 15), sections « Revue de nuit » à « Décompte après la revue de nuit » plus bas ; les sections d'origine ne sont pas modifiées. Le Greffier ne tranche pas entre les deux : une objection portée par un seul reste une objection, avec la gravité que son auteur lui a donnée. Aucun état n'est modifié ici : toutes les lignes restent « ouverte » dans les fiches d'origine.
 
 Règles de fusion appliquées :
 - Deux objections sont fusionnées quand elles visent le même défaut au même endroit, même formulées différemment. Une objection « paquet » qui vise plusieurs défauts est éclatée, et son id figure dans chaque ligne concernée (O-6, S-3, S-7, S-19).
@@ -65,6 +65,81 @@ Règles de fusion appliquées :
 Lecture du décompte, sans interprétation : les objections comptées par fiche (24 et 27) ne se superposent pas une à une aux lignes (25 lignes portent un id Opus, 28 un id Sonnet), car quatre paquets sont éclatés (O-6, S-3, S-7, S-19). Deux correspondances sont partielles (F-20 et F-22). En les retirant des communes, le taux serait 20 ÷ 31 = 65 %. Le taux publié au registre est 71 %.
 
 Une haute n'a qu'un seul porteur : F-1 (Sonnet).
+
+## Revue de nuit — verdict de chaque lecteur sur F-1 à F-12
+
+Sources de la revue : `objections.md` (Opus 5.5, lignes « revue nuit » de O-1 à O-10 et section F-1) et `objections_bis.md` (Sonnet 5.5, lignes « revue nuit »). Chaque fiche a reconstitué seule la correspondance F-n vers ses ids (aucune n'a pu lire `fusion.md`). Le Greffier recopie les verdicts, ne les arbitre pas. Dans les fiches, l'`état` formel reste « ouverte » pour toutes les hautes, sauf chez Sonnet pour F-4, F-5 et F-8 (« résolue … clôture formelle : Constructeur ou Nicolas »).
+
+| F | Opus | Sonnet | accord | ce qui reste ouvert (cité des fiches) |
+|---|---|---|---|---|
+| F-1 | partielle (section dédiée) | partielle (S-4) | oui | `scripts/` lisible et exécutable par le Juge ; union des campagnes ; `juge.md` contraire au mur ; `git log -p`, MCP non vus (Opus). Bash, MCP, plateforme ; la cible reste lisible et exécutable ailleurs (Sonnet). |
+| F-2 | partielle (O-2) | partielle (S-1) | oui | seules les barres sont remplacées ; calendrier, séries externes, paramètres estimés hors du champ ; `detect_leak` accepte un appelable nu ; rien dans `scripts/` n'appelle `write_acausalite_json`. |
+| F-3 | partielle (O-3) | partielle (S-2) | oui | pièces non reliées à une exécution ; `pipeline` seulement non vide ; planchers de la porte sous ceux des producteurs. |
+| F-4 | partielle (O-4) | **résolue** (S-8) | non | Opus : stop soldé exactement au niveau à l'intérieur d'une barre, biais absorbé par la référence, entier sur données réelles ; le test demandé échoue toujours (voir F-45). Sonnet : la nouvelle référence est consignée en F-37 et F-36. |
+| F-5 | **résolue** (O-1) | **résolue** (S-9) | oui | Opus signale que la correction ouvre F-35 et F-41 (mêmes mécanismes par d'autres voies). |
+| F-6 | **non résolue** (O-10) | partielle (S-6) | non (degré) | le texte du pré-enregistrement de cette campagne n'a pas changé : toujours ni constantes, ni intervalle de REPRODUIT, ni tolérance ; la section « Tolérances » n'est pas un champ obligatoire de P1. Empreintes de `spec.md` et `chiffre_scelle.txt` : faites. |
+| F-7 | partielle (O-5) | partielle (S-13) | oui | pas de test contre des barres bid/ask réelles ; swap facturé par barre tenue ; barres supposées médianes. |
+| F-8 | partielle (O-6 a-b) | **résolue** (S-10) | non | Opus : `n_trades` libre, bornes des tests fixées après lecture (journal, E2). Sonnet : booléen remplacé par une probabilité sur `n_reps` répétitions. |
+| F-9 | partielle (O-8) | partielle (S-5) | oui | un fichier non commité est sauté ; un résultat écrit ailleurs n'est pas regardé ; la publication n'exige pas un verdict commité. |
+| F-10 | partielle (O-9) | partielle (S-3) | oui | Opus : `path` `.git` non refusé ; chiffres dans les pièces à lire ; tests lisant une sortie vide. Sonnet : Bash, MCP, plateforme. |
+| F-11 | partielle (O-6 c-e) | partielle (S-11) | oui | aucun test ne protège « aucune dérive hors position » entre deux trades (Opus) ; une branche non exercée, avantage réalisé non mesuré sur les prix (Sonnet). |
+| F-12 | partielle (O-7) | partielle (S-7) | oui | `daily_low` jamais fourni par le dépôt ; chemin par défaut = majorant ; frontière de journée non imposée ; E-002 sans test. |
+
+Décompte par lecteur (sur les 12 hautes) :
+- Opus : 1 résolue (F-5) · 10 partielles (F-1, F-2, F-3, F-4, F-7, F-8, F-9, F-10, F-11, F-12) · 1 non résolue (F-6).
+- Sonnet : 3 résolues (F-4, F-5, F-8) · 9 partielles (F-1, F-2, F-3, F-6, F-7, F-9, F-10, F-11, F-12) · 0 non résolue.
+- Accord complet : 9 lignes (F-1, F-2, F-3, F-5, F-7, F-9, F-10, F-11, F-12). Désaccord : 3 (F-4, F-6, F-8). Résolue pour les deux : 1 (F-5).
+- Règle du Greffier : une objection tenue ouverte par un seul lecteur reste ouverte. Anciennes hautes encore ouvertes pour au moins un lecteur : 11 (les douze moins F-5). Aucune n'est fermée formellement : la clôture revient au Constructeur ou à Nicolas.
+
+## Revue de nuit — nouvelles objections fusionnées (F-32 et suivantes)
+
+Sources : Opus O-25 à O-32 (8) ; Sonnet S-28 à S-36 (9). Mêmes règles de fusion qu'avant. S-29 est un paquet ((a) et (c) : timing du signal rejoué ; (b) : `expected_r` non borné, biais mécanique absorbé) : il est éclaté entre F-35 et F-37. La colonne « origine » est le classement du Greffier d'après les fichiers cités (les fiches de Sonnet disent « introduits ou révélés par les corrections » sans distinguer) ; ce n'est pas une affirmation d'un lecteur.
+
+| F | titre | fichier:ligne | mécanisme | gravité | trouvée par | ids d'origine | origine | notes |
+|---|---|---|---|---|---|---|---|---|
+| F-32 | Le mur du Juge (`lab/` en bloc) et son protocole (produire P3 et P4 avec `lab`) s'excluent ; `murs.json` absent pour cette campagne ; sans `ROCBOTT_CAMPAGNE`, l'union des campagnes ouvre `lab/` à tout Juge ; `juge.md` appelle l'ancienne API | `.claude/hooks/murs.py:86-87,210-240,518-519` ; `.claude/agents/juge.md:19,29` ; `00_preenregistrement.md:12` ; `lab/control.py:269-343` ; `scripts/chiffres_note_session2.py:17-18` ; `tests/test_murs.py` | M6 | haute | les deux | O-29 ; S-28 | introduit par la correction de F-1 (hook) | 6 fichiers. Opus : moyenne ; Sonnet : haute. Issues décrites par les deux : ouvrir `lab/` (prédiction secondaire vide, tous les Juges) ou écrire les pièces à la main (F-3 d rétabli). Choix (b) du suivi. |
+| F-33 | Le script qui produit la cible de la prédiction secondaire a été réécrit pendant l'audit : cible écrite dans un fichier lisible et exécutable par le Juge, tolérance (t = 3,6) ajoutée après la mesure, conclusion « un tirage, pas un biais » imprimée quel que soit l'écart, §1.1 bis ajoutée | `scripts/chiffres_note_session2.py:21,37-101,150` ; `.claude/hooks/murs.py:86-87` et `controle_bash` ; `00_preenregistrement.md:12,19` ; `PRISE_DE_RELAIS.md:32` ; `suivi/journal.md:6` | M3 et M6 | haute | les deux | O-27 ; S-35 | introduit par la correction du Lot D (étape 3 bis) | 5 fichiers. Opus : haute ; Sonnet : moyenne. Opus ajoute : la date « 15/10/2026 » du docstring est postérieure à celle de l'environnement. Sonnet ajoute : un Juge qui réécrit depuis la prose ne peut pas « retrouver » les bornes d'un tirage de graine. Aucune des quatre réponses de lots ne revendique le changement. Rouvre F-1 par le script. |
+| F-34 | Le v2 « la plus récente fait foi » est un canal d'amendement non borné : il re-scelle empreintes, MDE et date de décision ; l'antériorité certifiée est celle de git, pas celle des mesures ; un fichier non commité est sauté ; « chiffré » = « contient un chiffre » | `scripts/greffier_publier.py:54-142,145-188,291-292` ; `scripts/_campagne.py:67-93` ; `tests/test_portes.py::test_dossier_sain_passe` ; `tests/test_organisation.py:327-345` | M3 | haute | les deux | O-26 ; S-32 | introduit par la réconciliation (P1 lit les v2) | 4 fichiers. Opus : haute ; Sonnet : moyenne. Les deux notent que, pour `fiab_001_depot`, le v2 est la seule voie de publication et serait écrit après les mesures. Choix (c) du suivi. Prolonge F-9. |
+| F-35 | Le R attendu du témoin reprend les instants de décision du signal : une fuite de calendrier (sélection indépendante du sens, lue dans le futur, portée par `signal`) est absorbée ; `excess_r_filtered_ref` absorbe par construction un filtre acausal et n'est pas dans la pièce ; aucun test n'exerce ce cas | `lab/control.py:166-198,247-263,293-301` ; `tests/test_colibri_reproduction.py:40-47,90-122` ; `journal_essais.md:14` | M1 (Opus) / M2 et M6 (Sonnet) | haute | les deux | O-25 ; S-29 (a, c) | introduit par la correction de F-4 et F-5 (témoin reconstruit) | 3 fichiers. Opus : haute ; Sonnet : moyenne. Opus la désigne comme celle qui, seule, empêcherait de faire confiance aux instruments ; l'ancien témoin sonnait sur ce cas. Choix (e) du suivi. |
+| F-36 | Le seuil \|t_excess\| < 3 de P3 n'est pas calibré à la configuration livrée : l'erreur-type de la référence est ignorée (facteur d'environ √1,2, calcul à la main) ; `n_ref_paths` libre et absent de la pièce ; taux non re-mesuré (journal) ; seuil bilatéral 3 contre unilatéral 3,6 de la courbe de puissance | `lab/control.py:137-144,243-263` ; `scripts/greffier_publier.py:39,208-209` ; `journal_essais.md:15-16` ; `tests/test_colibri_reproduction.py:40-47` ; `tests/test_lab_execution.py:79-91` ; `tests/test_power.py:25` | M3 (et M5) | moyenne | Sonnet | S-30 | introduit (seuil et référence de la nuit) | 6 fichiers. |
+| F-37 | P3 ne borne pas `expected_r` : un biais de la mécanique du simulateur indépendant du sens (signe d'un coût, fill meilleur que le niveau, grille intra-barre) est dans `expected_r` autant que dans `mean_r`, et `excess_r` l'annule ; une référence à +0,3 R passe | `lab/control.py:190-192` ; `scripts/greffier_publier.py:198-210` ; `tests/test_lab_execution.py:94-98` ; `tests/test_colibri_reproduction.py:122` ; `journal_essais.md:14` | M6 | moyenne | Sonnet | S-29 (b) | introduit par la correction de F-5 | 5 fichiers. Partie (b) du paquet S-29. |
+| F-38 | Hook : échec ouvert au niveau de la plateforme (erreur d'import, délai, interpréteur absent) ; le Constructeur peut écrire le hook et les portes sans trace que P1 vérifie ; les tests lisent une sortie vide comme « libre » sans contrôler le code de sortie | `.claude/hooks/murs.py:97-98,114,272-286,577-598` ; `.claude/settings.json:5-9` ; `tests/test_murs.py:50-69` ; `tests/test_organisation.py:24-31` | M6 | moyenne | Sonnet | S-34 | récidive de F-20 et F-21 ; le Lot C signale le point sans le corriger | 4 fichiers. Opus avait noté « un hook qui plante laisse passer » dans O-9 et O-16 (F-10, F-20) ; il ne porte pas la ligne nouvelle. Choix (d) du suivi. |
+| F-39 | Les pièces P3/P4 désignent un « pipeline » par une empreinte aveugle à ses paramètres capturés et à la version de `lab/` ; ni `sigma_bp`, `n_paths`, `n_bars`, `n_ref_paths`, ni l'identité des barres ne sont dans les pièces ; rien ne relie P3, P4 et le verdict ; planchers de la porte (30 / 50) sous ceux des producteurs (500 / 30) | `lab/control.py:63-72,127-134,277,289-301,316,331-341` ; `scripts/greffier_publier.py:37-40,191-229` ; `tests/test_colibri_reproduction.py:99` | M6 (et M3) | moyenne | Sonnet | S-31 | introduit (pièces et empreinte de la nuit) | 3 fichiers. Opus a vu les mêmes manques dans sa revue de O-3 (d), sans ligne nouvelle : F-3 reste partielle chez les deux. Choix (a) du suivi. |
+| F-40 | P5 ne bloque que sur le mot « ouverte » : « contestée », « reportée », « partielle », « non résolue » (lu « non »), « ouvert » ouvrent la porte ; aucun test hors `ouverte` / `résolue` | `scripts/_campagne.py:126-131` ; `scripts/greffier_publier.py:247-252` ; `tests/test_portes.py:351-373` | M6 | moyenne | Sonnet | S-33 | **récidive de F-23** (même porte, même test de chaînes) | 3 fichiers. Gravité Sonnet : moyenne. Opus n'a pas d'entrée : sa fiche écrit « ouverte (revue de nuit : partielle) », qui ne déclenche pas le défaut. Voir `registre/erreurs.md`, récidive à traiter en priorité. |
+| F-41 | Référence à sens équiréparti (pile ou face) contre swaps asymétriques : le défaut de O-1 revient par le financement ; un pipeline propre acheteur seulement voit `t_excess` dériver avec n | `lab/control.py:190-192` ; `lab/simulate.py:154-155` | M4 | moyenne | Opus | O-28 | introduit par la correction de F-5 | 2 fichiers. Effet dit faible sur barres intrajournalières, réel sur barres journalières (Opus, non mesuré). |
+| F-42 | Bornes de tests (faux positif nul à 40 répétitions, puissance ≥ 0,85 à 8 bp, `p4 < p8 − 0,4`, fraction de fuite 0,10) fixées après lecture des valeurs, déclaré au journal | `tests/test_power.py:41-47,56-60` ; `tests/test_colibri_reproduction.py:103-122` ; `journal_essais.md:19-20` | M3 | basse | Sonnet | S-36 | introduit (tests de la nuit) | 3 fichiers. Opus cite la même réserve dans O-1 et O-6 (b), sans ligne dédiée. |
+| F-43 | Test de puissance : « avantage réalisé » compté (dérive par barre × barres tenues) et non mesuré sur les prix ; barre de sortie entière ; « hors position » vérifié avant le premier trade seulement | `lab/control.py:426-436` ; `tests/test_power.py` (deux tests) | M6 | basse | Opus | O-31 | introduit (correction de F-11) | 2 fichiers. |
+| F-44 | Demi-écart par barre appliqué par indice à des marches synthétiques (profil horaire sur des instants qui n'en ont pas ; `IndexError` possible ; empreinte = longueur du tableau) | `lab/simulate.py:98-99` ; `lab/control.py:129,189-192,240-241,405` | M4 | basse | Opus | O-30 | introduit (correction de F-7) | 2 fichiers. |
+| F-45 | Un test fige le biais de dépassement que O-4 demandait de supprimer (`abs(res.t) > 4`, `abs(res.expected_r) > 0.02` à dérive nulle, stop ≠ objectif) : le défaut est devenu une propriété protégée | `tests/test_lab_execution.py::test_asymmetric_stop_and_target_zero_drift_has_no_significant_excess` | M6 | basse | Opus | O-32 | introduit (correction de F-4) | 1 fichier. |
+
+Correspondance inverse des nouvelles objections :
+- Opus O-25 à O-32 : O-25 F-35 · O-26 F-34 · O-27 F-33 · O-28 F-41 · O-29 F-32 · O-30 F-44 · O-31 F-43 · O-32 F-45. Aucune sans ligne.
+- Sonnet S-28 à S-36 : S-28 F-32 · S-29 F-35 et F-37 · S-30 F-36 · S-31 F-39 · S-32 F-34 · S-33 F-40 · S-34 F-38 · S-35 F-33 · S-36 F-42. Aucune sans ligne.
+
+## Décompte après la revue de nuit
+
+Nouvelles objections de la revue (F-32 à F-45) :
+- Objections distinctes : **14**
+  - hautes : 4 (F-32 à F-35)
+  - moyennes : 6 (F-36 à F-41)
+  - basses : 4 (F-42 à F-45)
+- Trouvées par les deux (communes) : **4** (F-32, F-33, F-34, F-35 ; toutes hautes)
+- Propres à Opus : **4** (F-41 moyenne ; F-43, F-44, F-45 basses)
+- Propres à Sonnet : **6** (F-36, F-37, F-38, F-39, F-40 moyennes ; F-42 basse)
+- Comptées par fiche : Opus 8 (O-25 à O-32), Sonnet 9 (S-28 à S-36). Lignes portant un id Opus : 8 ; un id Sonnet : 10 (S-29 éclaté sur deux lignes).
+
+**Taux de recouvrement de la revue de nuit = communes ÷ distinctes = 4 ÷ 14 = 29 %.** Sans éclater S-29 (13 distinctes), 4 ÷ 13 = 31 %. Le taux publié est 29 %.
+
+Cumul avec la passe initiale (F-1 à F-45) :
+- distinctes : 45 (hautes 16, moyennes 19, basses 10)
+- communes : 26 (22 + 4) ; propres à Opus : 7 ; propres à Sonnet : 12
+- taux cumulé : 26 ÷ 45 = 58 %. Non inscrit au registre : la ligne de la revue est celle de la revue seule, la passe initiale reste à 71 %.
+
+Hautes encore ouvertes pour au moins un lecteur : 15 = 11 anciennes (F-1, F-2, F-3, F-4, F-6, F-7, F-8, F-9, F-10, F-11, F-12) + 4 nouvelles (F-32 à F-35). Résolue pour les deux lecteurs : F-5 seule.
+
+Aucune haute nouvelle n'a un porteur unique. La haute à porteur unique de la passe initiale (F-1, Sonnet) est désormais jugée partielle par les deux.
+
+Le rappel ci-dessous s'applique tel quel : aucun défaut planté n'a été placé dans la revue de nuit, et ces taux ne sont pas un rappel. Les deux lecteurs ont relu des corrections écrites par un modèle de la même famille que Sonnet : la baisse du recouvrement (71 % puis 29 %) ne dit rien sur ce qui reste invisible aux deux.
 
 ## Rappel
 

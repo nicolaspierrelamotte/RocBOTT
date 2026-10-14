@@ -5,3 +5,4 @@ Si, après dix campagnes, le taux est proche de 100 %, le second lecteur ne voit
 | campagne | objections Opus | objections Sonnet | communes | taux |
 |---|---|---|---|---|
 | fiab_001_depot | 24 | 27 | 22 | 71 % |
+| fiab_001_depot (revue de nuit) | 8 | 9 | 4 | 29 % |
