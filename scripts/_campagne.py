@@ -64,6 +64,35 @@ def est_ancetre(ancetre: str, descendant: str, cwd: Path | None = None) -> bool:
     return r.returncode == 0
 
 
+RE_VERSION_PRE = re.compile(r"^00_preenregistrement(?:_v(\d+))?\.md$")
+
+
+def versions_preenregistrement(d: Path) -> tuple[list[tuple[int, Path]], list[str]]:
+    """([(numéro, chemin)] triés, erreurs) des versions du pré-enregistrement d'une campagne.
+
+    `00_preenregistrement.md` est la version 1 ; une révision est un NOUVEAU fichier
+    `00_preenregistrement_v2.md`, `_v3.md`… à côté, jamais une réécriture. Échec fermé : un fichier
+    `00_preenregistrement*` hors de cette nomenclature (`_v1`, `_v0`, `_final`, `.bak`…), ou une suite de
+    numéros à trou, est une erreur, pas un fichier ignoré.
+    """
+    erreurs: list[str] = []
+    versions: dict[int, Path] = {}
+    for p in sorted(d.glob("00_preenregistrement*")):
+        m = RE_VERSION_PRE.match(p.name)
+        if not m:
+            erreurs.append(f"fichier {p.name} hors nomenclature (00_preenregistrement.md, puis _v2.md, _v3.md…)")
+            continue
+        n = int(m.group(1)) if m.group(1) else 1
+        if m.group(1) and n < 2:
+            erreurs.append(f"{p.name} : une révision commence à _v2 (la version 1 est 00_preenregistrement.md)")
+            continue
+        versions[n] = p
+    manquantes = [n for n in range(1, max(versions, default=0) + 1) if n not in versions]
+    if manquantes:
+        erreurs.append(f"versions manquantes dans la suite du pré-enregistrement : {manquantes}")
+    return [(n, versions[n]) for n in sorted(versions)], erreurs
+
+
 def sha256_fichier(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 

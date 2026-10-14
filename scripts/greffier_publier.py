@@ -3,12 +3,14 @@
     python scripts/greffier_publier.py <id>
 
 Portes :
-  P1  00_preenregistrement.md : champs obligatoires, aucun champ de gabarit non rempli ; commité ; texte du
-      disque IDENTIQUE au blob de son premier commit ; commit strictement antérieur (dates git ET ascendance)
-      au premier commit de tout fichier de résultat ou de verdict ; empreintes sha256 de spec.md et de
-      chiffre_scelle.txt portées par le pré-enregistrement et égales à celles du disque
+  P1  00_preenregistrement.md, puis _v2.md, _v3.md… (une révision s'ajoute, ne remplace rien) : chaque
+      version commitée, texte du disque IDENTIQUE au blob de son premier commit, chacune descendante de la
+      précédente, aucun champ de gabarit non rempli dans aucune ; champs obligatoires présents dans
+      l'ensemble ; la version la plus récente fait foi pour les empreintes sha256 de spec.md et de
+      chiffre_scelle.txt (égales à celles du disque) et pour l'antériorité : son commit strictement
+      antérieur (dates git ET ascendance) au premier commit de tout fichier de résultat ou de verdict
   P2  puissance déclarée : MDE chiffré (ou « sans objet (raison) », alors un verdict TUÉ est impossible) et
-      date de décision datée
+      date de décision datée ; lus dans la version la plus récente qui les déclare
   P3  30_juge/temoin_derive_nulle.json : n_trades >= 30, t_excess fini et |t_excess| < 3 (écart au R attendu,
       pas R brut), champs du contrat présents
   P4  30_juge/acausalite.json : n_checked >= 50, n_changed == 0, champs du contrat présents
@@ -27,7 +29,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _campagne import (REGISTRE, VERDICTS, VOISINS, commit_du_fichier, contenu_au_commit,  # noqa: E402
-                       dossier, entrees_objections, est_ancetre, lire_json, lire_verdict, sha256_fichier)
+                       dossier, entrees_objections, est_ancetre, lire_json, lire_verdict, sha256_fichier,
+                       versions_preenregistrement)
 
 CHAMPS_P1 = ("## Hypothèse", "## Perdant nommé", "## Prédiction secondaire", "## Constantes", "## Ce qui tuerait")
 # Contrat avec le producteur des JSON (Lot A) : champs obligatoires et planchers.
@@ -60,24 +63,54 @@ def _fichiers_resultat(d: Path) -> list[Path]:
     return out
 
 
-def _p1(d: Path, pre: Path, racine_git: Path | None) -> list[str]:
+def _nom_court(n: int) -> str:
+    return "pré-enregistrement" if n == 1 else f"pré-enregistrement v{n}"
+
+
+def _p1(d: Path, versions: list[tuple[int, Path]], racine_git: Path | None) -> list[str]:
+    """`versions` : [(numéro, chemin)] du pré-enregistrement, la plus ancienne d'abord (jamais vide).
+
+    Chaque version est vérifiée seule (commitée, texte du disque = blob de son premier commit) ; les
+    versions se suivent dans l'historique (chacune a pour ancêtre la précédente) ; la PLUS RÉCENTE fait foi
+    pour les empreintes et pour l'antériorité sur les résultats et le verdict. Une révision ne remplace
+    pas la version 1 : elle s'y ajoute, et la version 1 reste vérifiée (blob, gabarit rempli).
+    """
     fermees: list[str] = []
-    brut = pre.read_bytes()
-    txt = brut.decode("utf-8", errors="replace")
-    manquants = [c for c in CHAMPS_P1 if c not in txt]
+    textes = {n: p.read_bytes().decode("utf-8", errors="replace") for n, p in versions}
+    dernier = versions[-1][0]
+    txt = textes[dernier]
+
+    # Champs obligatoires : présents dans l'ensemble des versions (une révision peut n'en changer qu'une partie).
+    ensemble = "\n".join(textes.values())
+    manquants = [c for c in CHAMPS_P1 if c not in ensemble]
     if manquants:
         fermees.append(f"P1 : champs manquants {manquants}")
-    if RE_GABARIT.search(txt):
-        fermees.append("P1 : le gabarit contient encore des champs non remplis (<...>, TODO)")
+    # Gabarit : toute version scellée avec un champ non rempli reste scellée avec ce champ non rempli.
+    for n, t in textes.items():
+        if RE_GABARIT.search(t):
+            fermees.append("P1 : le gabarit contient encore des champs non remplis (<...>, TODO)"
+                           + ("" if n == 1 else f" [v{n}]"))
 
-    c = commit_du_fichier(pre, cwd=racine_git)
-    if c is None:
-        fermees.append("P1 : le pré-enregistrement n'est pas commité (pas de preuve d'antériorité)")
-    else:
-        sha_pre, date_pre = c
-        blob = contenu_au_commit(pre, sha_pre, cwd=racine_git)
-        if blob != brut:
-            fermees.append(f"P1 : le texte du pré-enregistrement sur le disque diffère de son blob commité ({sha_pre[:10]}) : il a été modifié après le scellé")
+    commits: dict[int, tuple[str, str]] = {}
+    for n, p in versions:
+        nc = _nom_court(n)
+        c = commit_du_fichier(p, cwd=racine_git)
+        if c is None:
+            fermees.append(f"P1 : le {nc} n'est pas commité (pas de preuve d'antériorité)")
+            continue
+        commits[n] = c
+        blob = contenu_au_commit(p, c[0], cwd=racine_git)
+        if blob != p.read_bytes():
+            fermees.append(f"P1 : le texte du {nc} sur le disque diffère de son blob commité ({c[0][:10]}) : il a été modifié après le scellé")
+    # Les versions se suivent : chacune est descendante de la précédente.
+    for (n0, _), (n1, _) in zip(versions, versions[1:]):
+        if n0 in commits and n1 in commits and not est_ancetre(commits[n0][0], commits[n1][0], cwd=racine_git):
+            fermees.append(f"P1 : le commit du {_nom_court(n1)} n'est pas postérieur (ascendance) à celui du {_nom_court(n0)}")
+
+    # Antériorité de la version la plus récente sur tout résultat et sur le verdict.
+    if dernier in commits:
+        sha_pre, date_pre = commits[dernier]
+        nc = _nom_court(dernier)
         d_pre = datetime.fromisoformat(date_pre)
         for res in _fichiers_resultat(d):
             cr = commit_du_fichier(res, cwd=racine_git)
@@ -86,13 +119,13 @@ def _p1(d: Path, pre: Path, racine_git: Path | None) -> list[str]:
             sha_r, date_r = cr
             rel = res.relative_to(d)
             if sha_r == sha_pre:
-                fermees.append(f"P1 : {rel} est entré dans le même commit que le pré-enregistrement (pas d'antériorité)")
+                fermees.append(f"P1 : {rel} est entré dans le même commit que le {nc} (pas d'antériorité)")
             elif d_pre > datetime.fromisoformat(date_r):
-                fermees.append(f"P1 : le pré-enregistrement (commit {date_pre}) est postérieur à {rel} (premier commit {date_r})")
+                fermees.append(f"P1 : le {nc} (commit {date_pre}) est postérieur à {rel} (premier commit {date_r})")
             elif not est_ancetre(sha_pre, sha_r, cwd=racine_git):
-                fermees.append(f"P1 : le commit du pré-enregistrement n'est pas un ancêtre du premier commit de {rel}")
+                fermees.append(f"P1 : le commit du {nc} n'est pas un ancêtre du premier commit de {rel}")
 
-    # Empreintes des pièces scellées (F-6)
+    # Empreintes des pièces scellées (F-6) : celles de la version la plus récente font foi
     for piece in PIECES_SCELLEES:
         p = d / piece
         nom = Path(piece).name
@@ -100,7 +133,8 @@ def _p1(d: Path, pre: Path, racine_git: Path | None) -> list[str]:
         declarees = {x.lower() for x in declarees}
         if p.exists():
             if not declarees:
-                fermees.append(f"P1 : {nom} existe mais le pré-enregistrement ne porte pas son empreinte sha256")
+                fermees.append(f"P1 : {nom} existe mais le pré-enregistrement ne porte pas son empreinte sha256"
+                               + ("" if dernier == 1 else f" (version la plus récente : v{dernier})"))
             elif declarees != {sha256_fichier(p)}:
                 fermees.append(f"P1 : l'empreinte sha256 de {nom} ne correspond pas à celle du pré-enregistrement (pièce modifiée après le scellé)")
         elif declarees:
@@ -113,20 +147,43 @@ def _valeurs_mde(txt: str) -> list[str]:
     return [m.group(1).strip() for m in re.finditer(r"(?im)^.*\bMDE\b[^\n]*?:\s*(.*)$", txt)]
 
 
-def _mde_sans_objet(txt: str) -> bool:
-    vals = _valeurs_mde(txt)
+def _derniere_version_qui_dit(textes: list[str], motif) -> str:
+    """Texte de la version la plus récente qui contient `motif` (fonction texte -> bool), sinon le dernier."""
+    for t in reversed(textes):
+        if motif(t):
+            return t
+    return textes[-1]
+
+
+def _mde_en_vigueur(textes: list[str]) -> list[str]:
+    """Valeurs de MDE de la version la plus récente qui en déclare : une version antérieure qui disait
+    autre chose ne peut pas servir de refuge."""
+    return _valeurs_mde(_derniere_version_qui_dit(textes, lambda t: bool(_valeurs_mde(t))))
+
+
+def _mde_sans_objet(textes: list[str] | str) -> bool:
+    if isinstance(textes, str):
+        textes = [textes]
+    vals = _mde_en_vigueur(textes)
     return bool(vals) and not any(re.search(r"\d", v) and not re.match(r"(?i)sans objet", v) for v in vals)
 
 
-def _p2(txt: str) -> list[str]:
+RE_DATE_DECISION = re.compile(r"(?i)date de décision[^\n:]*:\s*\**\s*\d{4}-\d{2}")
+
+
+def _p2(textes: list[str] | str) -> list[str]:
+    """Puissance et date de décision : lues dans la version la plus récente qui les déclare."""
+    if isinstance(textes, str):
+        textes = [textes]
     fermees: list[str] = []
-    vals = _valeurs_mde(txt)
+    vals = _mde_en_vigueur(textes)
     if not vals:
         fermees.append("P2 : puissance non déclarée (ligne MDE absente)")
     elif not any((re.search(r"\d", v) and not re.match(r"(?i)sans objet", v))
                  or re.match(r"(?i)sans objet\s*\(\s*\S[^)]*\)", v) for v in vals):
         fermees.append("P2 : MDE ni chiffré ni « sans objet (raison) »")
-    if not re.search(r"(?i)date de décision[^\n:]*:\s*\**\s*\d{4}-\d{2}", txt):
+    if not RE_DATE_DECISION.search(_derniere_version_qui_dit(
+            textes, lambda t: bool(re.search(r"(?i)date de décision", t)))):
         fermees.append("P2 : date de décision absente ou non datée (AAAA-MM[-JJ])")
     return fermees
 
@@ -201,14 +258,17 @@ def _p5_objections(d: Path) -> list[str]:
 def verifier(d: Path, racine_git: Path | None = None) -> list[str]:
     """Retourne la liste des portes fermées (vide = tout passe)."""
     fermees: list[str] = []
-    pre = d / "00_preenregistrement.md"
     verdict_p = d / "30_juge/verdict.md"
 
-    if not pre.exists():
+    versions, erreurs_versions = versions_preenregistrement(d)
+    fermees += [f"P1 : {e}" for e in erreurs_versions]
+    if not (d / "00_preenregistrement.md").exists():
         fermees.append("P1 : pas de 00_preenregistrement.md")
-    else:
-        fermees += _p1(d, pre, racine_git)
-        fermees += _p2(pre.read_text())
+    textes_pre: list[str] = []
+    if versions:
+        fermees += _p1(d, versions, racine_git)
+        textes_pre = [p.read_text() for _, p in versions]
+        fermees += _p2(textes_pre)
 
     fermees += _p3(lire_json(d / "30_juge/temoin_derive_nulle.json"))
     fermees += _p4(lire_json(d / "30_juge/acausalite.json"))
@@ -228,7 +288,7 @@ def verifier(d: Path, racine_git: Path | None = None) -> list[str]:
         if verdict == "TUÉ":
             if not re.search(r"(?<!\w)MDE(?!\w)", v):
                 fermees.append("P5 : TUÉ sans MDE écrit à côté")
-            if pre.exists() and _mde_sans_objet(pre.read_text()):
+            if textes_pre and _mde_sans_objet(textes_pre):
                 fermees.append("P5 : TUÉ alors que le pré-enregistrement déclare un MDE sans objet (aucune puissance de conclure)")
     fermees += _p5_objections(d)
     return fermees
@@ -240,12 +300,18 @@ def publier(d: Path, racine_git: Path | None = None, registre: Path | None = Non
         raise SystemExit("REFUS DE PUBLICATION\n" + "\n".join(f"  - {f}" for f in fermees))
     v = (d / "30_juge/verdict.md").read_text()
     verdict, _ = lire_verdict(v)
-    sha, date_pre = commit_du_fichier(d / "00_preenregistrement.md", cwd=racine_git)
+    versions, _ = versions_preenregistrement(d)
+    der = versions[-1][1]  # la version la plus récente fait foi ; toutes sont listées plus bas
+    sha, date_pre = commit_du_fichier(der, cwd=racine_git)
     entree = {
         "campagne": d.name, "verdict": verdict, "preenregistrement_commit": sha,
         "preenregistrement_date": date_pre,
-        "preenregistrement_sha256": sha256_fichier(d / "00_preenregistrement.md"),
-        "mde_sans_objet": _mde_sans_objet((d / "00_preenregistrement.md").read_text()),
+        "preenregistrement_fichier": der.name,
+        "preenregistrement_sha256": sha256_fichier(der),
+        "preenregistrement_versions": [
+            {"fichier": p.name, "commit": commit_du_fichier(p, cwd=racine_git)[0], "sha256": sha256_fichier(p)}
+            for _, p in versions],
+        "mde_sans_objet": _mde_sans_objet([p.read_text() for _, p in versions]),
         "publie_le": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "verdict_fichier": str((d / "30_juge/verdict.md").relative_to(d.parent.parent)),
     }
