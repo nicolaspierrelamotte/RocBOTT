@@ -19,7 +19,8 @@ import sys
 # Fragments de chemin interdits en LECTURE, par rôle.
 INTERDIT_LECTURE: dict[str, list[str]] = {
     "constructeur": ["/30_juge/", "cle_aveugle", "/coffre/"],
-    "verificateur": ["/resultats/", "/30_juge/", "/40_greffier/", "/50_fiche", "cle_aveugle", "/coffre/", "/registre/registre.jsonl", "/fiches/"],
+    "verificateur": ["/resultats/", "/30_juge/", "/40_greffier/", "/50_fiche", "cle_aveugle", "/coffre/", "/registre/registre.jsonl", "/fiches/", "objections_bis", "fusion.md"],
+    "verificateur-bis": ["/resultats/", "/30_juge/", "/40_greffier/", "/50_fiche", "cle_aveugle", "/coffre/", "/registre/registre.jsonl", "/fiches/", "objections.md", "fusion.md"],
     "juge": ["/10_constructeur/", "/20_verificateur/", "cle_aveugle", "/coffre/", "onedrive", "OneDrive"],
     "rapporteur": ["cle_aveugle", "/coffre/"],
     "greffier": ["/coffre/"],
@@ -28,7 +29,8 @@ INTERDIT_LECTURE: dict[str, list[str]] = {
 # Préfixes de chemin AUTORISÉS en ÉCRITURE, par rôle (tout le reste est refusé).
 AUTORISE_ECRITURE: dict[str, list[str]] = {
     "constructeur": ["/10_constructeur/", "/30_juge/entrees/"],
-    "verificateur": ["/20_verificateur/"],
+    "verificateur": ["/20_verificateur/objections.md"],
+    "verificateur-bis": ["/20_verificateur/objections_bis.md"],
     "juge": ["/30_juge/"],
     "rapporteur": ["/fiches/"],
     # greffier : pas de restriction d'écriture, sauf les chemins ci-dessous.

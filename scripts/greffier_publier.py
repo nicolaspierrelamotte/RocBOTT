@@ -80,14 +80,16 @@ def verifier(d: Path, racine_git: Path | None = None) -> list[str]:
             fermees.append(f"P5 : voisins manquants {manq}")
         if "TUÉ" in v and "MDE" not in v:
             fermees.append("P5 : TUÉ sans MDE écrit à côté")
-    obj = d / "20_verificateur/objections.md"
-    if obj.exists():
+    fiches = sorted((d / "20_verificateur").glob("objections*.md")) if (d / "20_verificateur").exists() else []
+    if not fiches:
+        fermees.append("P5 : pas de fiche d'objections (aucun Vérificateur n'est passé)")
+    for obj in fiches:
         o = obj.read_text()
         hautes_ouvertes = re.findall(r"gravité\s*:\s*haute[\s\S]*?état\s*:\s*ouverte", o, flags=re.I)
         if hautes_ouvertes:
-            fermees.append(f"P5 : {len(hautes_ouvertes)} objection(s) HAUTE(s) encore ouverte(s)")
-    else:
-        fermees.append("P5 : pas de fiche d'objections (le Vérificateur n'est pas passé)")
+            fermees.append(f"P5 : {len(hautes_ouvertes)} objection(s) HAUTE(s) encore ouverte(s) dans {obj.name}")
+    if len(fiches) >= 2 and not (d / "20_verificateur/fusion.md").exists():
+        fermees.append("P5 : deux Vérificateurs sont passés mais le Greffier n'a pas écrit fusion.md (recouvrement)")
     return fermees
 
 

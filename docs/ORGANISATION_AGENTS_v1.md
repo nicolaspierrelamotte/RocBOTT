@@ -82,7 +82,7 @@ Le Vérificateur ne lance rien et ne mesure rien. Il lit. Il est payé pour la d
 | **reçoit** | la fiche du vendredi (une page : chaque chiffre avec ses quatre voisins et son verdict), les objections non résolues, les demandes de sortie du parking |
 | **ne fait pas** | il ne construit pas, il ne corrige pas de code. Son temps est trop précieux pour cela : il est le seul lecteur qui ne partage ni le code ni la population. |
 | **décide** | ce qui sort du parking ; ce qui est acheté (jamais avant le temps 3) ; les arbitrages entre Constructeur et Vérificateur quand ils ne s'accordent pas par écrit ; les objectifs |
-| **lance** | la mesure décisive du Juge, une fois par campagne |
+| **autorise** | la mesure décisive du Juge, par un « oui », une fois par campagne. Aucun geste technique : la session exécute, lui décide. |
 
 ## 2. Les murs
 
@@ -181,7 +181,17 @@ Si tout passe, l'entrée va dans `registre/registre.jsonl` avec l'empreinte du c
 
 Les autres scripts : `campagne_nouvelle.py` (squelette et gabarit), `greffier_aveugler.py` (A/B par tirage au sort, clé scellée jusqu'au verdict), `greffier_echantillon.py` (dix faits au hasard pour l'audit mensuel). `registre/erreurs.md` est amorcé avec les six erreurs connues et leur test.
 
-### Comment lancer une campagne
+### Second Vérificateur sur Opus 4.8 (ajouté le 15/10)
+
+`verificateur-bis.md`, même consigne, modèle `claude-opus-4-8` : une génération antérieure, entraînée séparément, donc des angles morts moins recouvrants que ceux de Sonnet 5.5 et Opus 5.5 entre eux. Ce n'est pas « meilleur », c'est « différent », et c'est ce qu'on achète. Les deux Vérificateurs ne se voient pas (hook). Le Greffier écrit `fusion.md` et une ligne dans `registre/recouvrement.md`. Si, après dix campagnes, le recouvrement est proche de 100 %, le doublon se retire en sachant pourquoi. Changer le modèle est une ligne de l'en-tête du fichier.
+
+### Comment lancer une campagne — sans geste technique
+
+Nicolas ne tape aucune commande. La procédure est une compétence de la session principale : `/campagne`. Il dit, en français, `/campagne nouvelle "les nombres ronds arrêtent le prix"`, répond à trois questions, lit le pré-enregistrement, dit « oui » pour le sceller, puis **un seul autre oui**, avant le Juge. Le reste (scripts, git, agents, aveuglement, publication, fiche) est à la session. Le détail est dans `.claude/skills/campagne/SKILL.md`.
+
+Le seul acte technique qui subsiste est d'ouvrir Claude Code dans ce dépôt, en local sur son poste quand une campagne a besoin de données du laboratoire OneDrive, en ligne sinon.
+
+### Ancien mode d'emploi (gardé pour la session, pas pour Nicolas)
 
 Depuis une session Claude Code **en local sur le poste de Nicolas**, dans ce dépôt :
 

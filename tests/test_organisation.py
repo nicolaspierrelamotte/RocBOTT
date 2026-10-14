@@ -33,6 +33,22 @@ def test_verificateur_ne_voit_pas_les_resultats_mais_lit_le_code():
     assert hook("verificateur", "Write", {"file_path": "/x/campagnes/c1/20_verificateur/objections.md"}) is None
 
 
+def test_les_deux_verificateurs_ne_se_voient_pas():
+    assert refuse(hook("verificateur", "Read", {"file_path": "/x/campagnes/c1/20_verificateur/objections_bis.md"}))
+    assert refuse(hook("verificateur-bis", "Read", {"file_path": "/x/campagnes/c1/20_verificateur/objections.md"}))
+    assert hook("verificateur-bis", "Write", {"file_path": "/x/campagnes/c1/20_verificateur/objections_bis.md"}) is None
+    assert refuse(hook("verificateur-bis", "Write", {"file_path": "/x/campagnes/c1/20_verificateur/objections.md"}))
+
+
+def test_publier_exige_la_fusion_quand_deux_verificateurs_sont_passes(campagne):
+    repo, d = campagne
+    (d / "20_verificateur/objections_bis.md").write_text("### O-1\n- gravité : basse\n- état : ouverte\n")
+    fermees = greffier_publier.verifier(d, racine_git=repo)
+    assert any("fusion.md" in f for f in fermees)
+    (d / "20_verificateur/fusion.md").write_text("| taux | 0,5 |\n")
+    assert not greffier_publier.verifier(d, racine_git=repo)
+
+
 def test_juge_ne_voit_pas_le_code_du_constructeur_ni_la_cle():
     assert refuse(hook("juge", "Read", {"file_path": "/x/campagnes/c1/10_constructeur/code/strat.py"}))
     assert refuse(hook("juge", "Bash", {"command": "cat campagnes/c1/40_greffier/cle_aveugle.json"}))
