@@ -17,6 +17,8 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 | `docs/CATALOGUE_ACTEURS_FORCES_v0.2.md` | 8 acteurs forcés, 3 familles de niveaux, protocole de mesure, sources de données. Remplace la v0.1, non conservée. |
 | `docs/NOTE_REFLEXION_2026-09-19_session2.md` | note de la session 2 : le piège du critère de jugement, le budget de puissance des nombres ronds, la source Myfxbook. |
 | `docs/PROTOCOLE_ADDENDA_2026-09-19.md` | règles à inscrire au protocole, séparées en acceptées et proposées. |
+| `docs/METHODE_FIABILITE_v1.md` | **la méthode** : pourquoi les modèles se plantent (six mécanismes), le vocabulaire des quatre verdicts qui empêche de fermer trop vite, sept portes mécaniques, comment le système apprend, d'où viennent les pistes, l'organisation. Lecture du plan externe du 14/10 en §7. |
+| `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` | lecture du rapport d'audit du 13/10, les trois causes non nommées, proposition de sortie en quatre temps. |
 | `docs/ENVIRONNEMENT_ACCES_RESEAU.md` | pourquoi les sources sont inaccessibles depuis les sessions, le réglage exact à changer, et ce que l'enregistreur Myfxbook doit capter. **À passer au dev.** |
 | `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` | session du 14/10 : lecture du rapport d'audit du 13/10 (synthèse + 18 157 lignes), les trois causes que le rapport ne nomme pas (granularité journalière → n ≈ 70 événements ; financement de nuit = 85 % du coût ; débit de campagnes sans second lecteur), réponse à la question de fond (10-15 %/an), et proposition en quatre temps : geler, quatre tests de destruction en salle blanche, changement de terrain (intraday, niveaux focaux), preuve en avant. |
 | `lab/`, `tests/` | instruments de réflexion : marche à dérive nulle, avantage planté, détecteur d'acausalité, témoin, test de puissance, critère FTMO. Prototypes, pas une livraison de dev. |
@@ -35,6 +37,8 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 **L'enregistreur ne peut pas vivre dans une session infonuagique** : la machine virtuelle est récupérée après inactivité et tout ce qui tourne en arrière-plan meurt avec elle. Il lui faut un hôte permanent. Ce point est indépendant du réglage réseau : les deux chantiers avancent en parallèle.
 
 ## À l'arbitrage de Nicolas
+
+Ajouté le 14/10, méthode (voir `docs/METHODE_FIABILITE_v1.md` §8) : changer la consigne de fin de tour des agents ; adopter les quatre verdicts et requalifier les fermetures du rapport ; script de publication qui vérifie les portes ; dix erreurs du registre transformées en tests ; fiche du vendredi.
 
 Ajouté le 14/10 (voir `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` §5) :
 
