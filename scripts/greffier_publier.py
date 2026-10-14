@@ -96,7 +96,7 @@ def _p1(d: Path, pre: Path, racine_git: Path | None) -> list[str]:
     for piece in PIECES_SCELLEES:
         p = d / piece
         nom = Path(piece).name
-        declarees = set(re.findall(rf"{re.escape(nom)}[^\n]*?sha256[^0-9a-fA-F\n]*([0-9a-fA-F]{{64}})", txt, flags=re.I))
+        declarees = set(re.findall(rf"{re.escape(nom)}[^\n]*?sha256[^\n]*?\b([0-9a-fA-F]{{64}})\b", txt, flags=re.I))
         declarees = {x.lower() for x in declarees}
         if p.exists():
             if not declarees:
@@ -108,21 +108,27 @@ def _p1(d: Path, pre: Path, racine_git: Path | None) -> list[str]:
     return fermees
 
 
+def _valeurs_mde(txt: str) -> list[str]:
+    """Texte qui suit « : » sur chaque ligne qui nomme le MDE."""
+    return [m.group(1).strip() for m in re.finditer(r"(?im)^.*\bMDE\b[^\n]*?:\s*(.*)$", txt)]
+
+
+def _mde_sans_objet(txt: str) -> bool:
+    vals = _valeurs_mde(txt)
+    return bool(vals) and not any(re.search(r"\d", v) and not re.match(r"(?i)sans objet", v) for v in vals)
+
+
 def _p2(txt: str) -> list[str]:
     fermees: list[str] = []
-    m = re.search(r"(?im)^.*\bMDE\b[^\n]*?:\s*(.*)$", txt)
-    if not m:
+    vals = _valeurs_mde(txt)
+    if not vals:
         fermees.append("P2 : puissance non déclarée (ligne MDE absente)")
-    elif not (re.search(r"\d", m.group(1)) or re.match(r"(?i)sans objet\s*\(\s*\S[^)]*\)", m.group(1).strip())):
+    elif not any((re.search(r"\d", v) and not re.match(r"(?i)sans objet", v))
+                 or re.match(r"(?i)sans objet\s*\(\s*\S[^)]*\)", v) for v in vals):
         fermees.append("P2 : MDE ni chiffré ni « sans objet (raison) »")
     if not re.search(r"(?i)date de décision[^\n:]*:\s*\**\s*\d{4}-\d{2}", txt):
         fermees.append("P2 : date de décision absente ou non datée (AAAA-MM[-JJ])")
     return fermees
-
-
-def _mde_sans_objet(txt: str) -> bool:
-    m = re.search(r"(?im)^.*\bMDE\b[^\n]*?:\s*(.*)$", txt)
-    return bool(m) and not re.search(r"\d", m.group(1))
 
 
 def _p3(tdn: dict | None) -> list[str]:

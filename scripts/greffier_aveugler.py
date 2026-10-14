@@ -1,7 +1,7 @@
 """Aveugle les deux séries pour le Juge, et garde la clé.
 
     python scripts/greffier_aveugler.py <id>            # hypothese.csv / temoin.csv -> A.csv / B.csv
-    python scripts/greffier_aveugler.py <id> --reveler  # affiche la clé, seulement si verdict.md existe
+    python scripts/greffier_aveugler.py <id> --reveler  # affiche la clé, seulement si verdict.md est COMMITÉ
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _campagne import dossier  # noqa: E402
+from _campagne import contenu_au_commit, dossier  # noqa: E402
 
 
 def sha256(p: Path) -> str:
@@ -47,9 +47,20 @@ def aveugler(d: Path) -> dict:
     return cle
 
 
-def reveler(d: Path) -> dict:
-    if not (d / "30_juge/verdict.md").exists():
+def reveler(d: Path, racine_git: Path | None = None) -> dict:
+    """La clé ne sort que si verdict.md est commité ET identique à sa version commitée.
+
+    Un fichier qui existe sur le disque n'est pas un verdict rendu : le Juge peut y écrire un brouillon,
+    et le Greffier ne doit pas pouvoir être amené à révéler la clé avant que le verdict soit figé par git.
+    """
+    v = d / "30_juge/verdict.md"
+    if not v.exists():
         raise SystemExit("pas de verdict.md : la clé reste scellée")
+    commite = contenu_au_commit(v, "HEAD", cwd=racine_git)
+    if commite is None:
+        raise SystemExit("verdict.md n'est pas commité : la clé reste scellée")
+    if commite != v.read_bytes():
+        raise SystemExit("verdict.md a été modifié depuis son commit : la clé reste scellée")
     return json.loads((d / "40_greffier/cle_aveugle.json").read_text())
 
 

@@ -28,6 +28,18 @@ GABARIT = """# Pré-enregistrement — campagne {id} — {titre}
 | constante | valeur | unité | pourquoi cette valeur |
 |---|---|---|---|
 
+## Tolérances, et probabilité de succès d'une réécriture exacte
+On scelle des ESPÉRANCES avec une tolérance calculée, jamais un tirage (leçon de l'écart 1a : un chiffre issu d'une graine ne se retrouve pas par une réécriture exacte avec une autre graine). Une ligne par chiffre scellé.
+| chiffre | espérance | erreur-type d'un tirage | tolérance (k × erreur-type, k déclaré) | probabilité qu'une réécriture exacte tombe dans la tolérance |
+|---|---|---|---|---|
+<une ligne par chiffre scellé, calculée avant la mesure>
+Si cette probabilité est inférieure à 0,95 pour un chiffre, il n'est pas un test de réécriture : l'écrire ici, et ne pas le sceller comme tel.
+
+## Empreintes des pièces scellées
+Pour chaque pièce qui existe au moment du scellé, son empreinte (`sha256sum`) sur la ligne qui porte son nom. La porte P1 refuse si une pièce existante n'a pas d'empreinte, ou si elle ne correspond pas.
+- 30_juge/entrees/spec.md : sha256 (à écrire si la pièce existe ; sinon laisser cette ligne telle quelle)
+- 30_juge/entrees/chiffre_scelle.txt : sha256 (à écrire si la pièce existe ; sinon laisser cette ligne telle quelle)
+
 ## Mesure
 <ce qui est calculé, le témoin (même niveau décalé d'une distance tirée au hasard, géométrie d'approche égale), et l'excès>
 
@@ -35,8 +47,8 @@ GABARIT = """# Pré-enregistrement — campagne {id} — {titre}
 - seuil : t = 3,6 (lié au registre)
 - événements disponibles (estimation) :
 - événements nécessaires pour 0,05 R :
-- MDE à ce nombre d'événements :
-- date de décision :
+- MDE à ce nombre d'événements : <chiffre en R, ou « sans objet (raison) » : alors TUÉ est impossible>
+- date de décision : <AAAA-MM-JJ>
 
 ## Ce qui tuerait proprement cette hypothèse
 <le falsificateur, écrit maintenant>

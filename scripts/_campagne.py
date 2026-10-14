@@ -24,8 +24,17 @@ def git(*args: str, cwd: Path | None = None) -> str:
     return out.stdout.strip()
 
 
+def racine_de(chemin: Path, cwd: Path | None = None) -> Path:
+    """Racine du dépôt git qui contient `chemin` (celle de `cwd` si elle est donnée)."""
+    if cwd is not None:
+        return cwd
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=str(chemin.resolve().parent),
+                       capture_output=True, text=True)
+    return Path(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else RACINE
+
+
 def _rel(chemin: Path, cwd: Path | None = None) -> str:
-    return str(chemin.resolve().relative_to((cwd or RACINE).resolve()))
+    return str(chemin.resolve().relative_to(racine_de(chemin, cwd).resolve()))
 
 
 def commit_du_fichier(chemin: Path, cwd: Path | None = None) -> tuple[str, str] | None:
@@ -34,6 +43,7 @@ def commit_du_fichier(chemin: Path, cwd: Path | None = None) -> tuple[str, str] 
     La date est celle du COMMIT (%cI), jamais celle du fichier sur disque (mtime) : un clonage ou un
     checkout change le mtime, pas l'historique.
     """
+    cwd = racine_de(chemin, cwd)
     out = git("log", "--diff-filter=A", "--format=%H %cI", "--", _rel(chemin, cwd), cwd=cwd)
     if not out:
         return None
@@ -43,7 +53,8 @@ def commit_du_fichier(chemin: Path, cwd: Path | None = None) -> tuple[str, str] 
 
 def contenu_au_commit(chemin: Path, rev: str, cwd: Path | None = None) -> bytes | None:
     """Octets du fichier tels qu'ils sont dans le commit `rev` (le blob), ou None s'il n'y est pas."""
-    r = subprocess.run(["git", "show", f"{rev}:{_rel(chemin, cwd)}"], cwd=str(cwd or RACINE), capture_output=True)
+    cwd = racine_de(chemin, cwd)
+    r = subprocess.run(["git", "show", f"{rev}:{_rel(chemin, cwd)}"], cwd=str(cwd), capture_output=True)
     return r.stdout if r.returncode == 0 else None
 
 
@@ -115,6 +126,7 @@ def lire_verdict(texte: str) -> tuple[str | None, str | None]:
 
 def lire_json(p: Path) -> dict | None:
     try:
-        return json.loads(p.read_text())
+        v = json.loads(p.read_text())
     except Exception:
         return None
+    return v if isinstance(v, dict) else None
