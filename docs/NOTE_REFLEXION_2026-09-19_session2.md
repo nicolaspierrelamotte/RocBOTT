@@ -8,9 +8,14 @@ Session de **réflexion**, comme la précédente. Elle ne pilote ni le dev ni l'
 
 Établis avec les outils de `lab/` (prototype de réflexion, voir §5) et reproductibles par `python scripts/chiffres_note_session2.py`. Ce sont des faits d'arithmétique sur des données synthétiques, pas des faits de marché.
 
-### 1.1 L'arithmétique des barrières FTMO tient, et ne dépend pas de la taille du pari
+### 1.1 L'arithmétique des barrières FTMO tient ; la taille du pari la change peu pour +10 %, moins négligeablement pour +5 %
 
-Sur un échantillon de journées **exactement centré** (dérive retirée), la probabilité d'atteindre la cible avant −10 % statique est indifférente au risque par trade, de 0,25 % à 3 % :
+> **Corrigé le 15/10/2026 après la campagne fiab_001_depot** (analyse : [`campagnes/fiab_001_depot/30_juge/ecart_1a.md`](../campagnes/fiab_001_depot/30_juge/ecart_1a.md)).
+> Texte d'origine, conservé : ~~« la probabilité d'atteindre la cible avant −10 % statique est **indifférente** au risque par trade, de 0,25 % à 3 % »~~ et ~~« C'est 1/2 et 2/3, **exactement** le relais §2 »~~.
+> Ce qui était trop fort : le Juge a reproduit le chiffre, mais P(+5 % avant −10 %) baisse de **0,038** entre 0,25 % et 3 % de risque (0,663 → 0,625 à 20 000 rééchantillonnages ; `scripts/chiffres_note_session2.py`, §1.1 bis). Mon recalcul compte environ 8 erreurs types de rééchantillonnage seul ; le Juge en compte ~16 : dans les deux cas, ce n'est pas du bruit. « Indifférente » est donc faux pour la phase 2. Pour +10 % l'écart est de 0,004 (0,7 erreur type) : compatible avec 0,5.
+> Mécanisme probable, **non testé ici** : à 3 % de risque l'écart-type journalier (4,2 %) approche la cible de 5 %, et le dépassement discret de la barrière n'est plus négligeable. Conséquence pratique : ne pas supposer que la taille du pari est neutre pour la probabilité de la phase 2.
+
+Sur un échantillon de journées **exactement centré** (dérive retirée), la probabilité d'atteindre la cible +10 % avant −10 % statique est **quasi inchangée** par le risque par trade, de 0,25 % à 3 % (0,50 ± 0,01) ; celle de +5 % reste voisine de 2 sur 3 mais **décroît à fort risque** (voir l'encart). Chiffres à ±0,008 (4 000 rééchantillonnages par cellule) :
 
 | risque par trade | écart-type journalier | P(+10 % avant −10 %) | P(+5 % avant −10 %) | jours médians |
 |---|---|---|---|---|
@@ -20,28 +25,48 @@ Sur un échantillon de journées **exactement centré** (dérive retirée), la p
 | 2,00 % | 2,81 % | 0,506 | 0,653 | 13 |
 | 3,00 % | 4,23 % | 0,502 | 0,623 | 7 |
 
-C'est 1/2 et 2/3, exactement le relais §2. La taille du pari ne change que le **temps** et l'exposition à la règle journalière des 5 %, jamais la probabilité de passage sans avantage. Ce que la taille achète, c'est la vitesse ; elle n'achète aucune chance.
+C'est, à peu de chose près, 1 sur 2 et 2 sur 3, le relais §2. La taille du pari change surtout le **temps** et l'exposition à la règle journalière des 5 % ; sur la probabilité de passage sans avantage elle ne change rien de mesurable à +10 % et un peu (jusqu'à −0,04) à +5 %. Ce que la taille achète, c'est la vitesse ; elle n'achète aucune chance.
 
 ### 1.2 Piège dans le critère de jugement lui-même (règle J1)
 
 Le critère commun aux deux sessions est la probabilité de passage **par rééchantillonnage des journées**. Ce critère hérite de la dérive réalisée de l'échantillon, et l'amplifie.
 
-Mesure : 20 échantillons indépendants de **16 000 trades** tirés d'une vraie espérance nulle, puis rééchantillonnés.
+> **Corrigé le 15/10/2026 après la campagne fiab_001_depot** (analyse : [`campagnes/fiab_001_depot/30_juge/ecart_1a.md`](../campagnes/fiab_001_depot/30_juge/ecart_1a.md)).
+> Le tableau d'origine publiait **un tirage comme une constante**. Texte d'origine, conservé :
+>
+> | | P(+10 % avant −10 %) |
+> |---|---|
+> | ~~vérité~~ | ~~0,500~~ |
+> | ~~minimum observé~~ | ~~0,31~~ |
+> | ~~médiane observée~~ | ~~0,59~~ |
+> | ~~maximum observé~~ | ~~0,83~~ |
+>
+> Ce qui était faux : lire la médiane 0,59 comme « le critère gonfle la probabilité », un décalage systématique. Min, médiane et max sont ceux d'**une** série de 20 échantillons (graine 11) ; une autre graine donne d'autres valeurs. **Le piège est une variance, pas un biais.** L'espérance de la médiane est 0,500 ; 0,59 est à ~2 écarts-types de cette espérance, dans la dispersion normale d'un tirage. Ce qui est vrai et durable est dans le tableau ci-dessous.
+> La conclusion qualitative (règle J1') est **confirmée** : ne jamais publier ce chiffre sans le centré et sans bande.
 
-| | P(+10 % avant −10 %) |
+Mesure : 20 échantillons indépendants de **16 000 trades** tirés d'une vraie espérance nulle, puis rééchantillonnés. La probabilité de passage de chaque échantillon dépend de sa dérive réalisée, mesurée en erreurs types (t, de loi N(0,1) quand l'espérance vraie est nulle). Forme fermée :
+
+**logit P ≈ 0,6455 × t**
+
+(0,6455 = 2 (b + 0,5826 σ) / (σ √n), avec b = 10 % la barrière, σ = 0,354 % l'écart-type journalier, n = 8 000 journées ; le terme 0,5826 σ est le dépassement discret de barrière. Recalculé par le script ; pente vérifiée par simulation à t = ±1 et ±1,96, à ±0,03 près.)
+
+| quantité (espérance vraie nulle, 20 échantillons de 16 000 trades) | valeur |
 |---|---|
-| vérité | 0,500 |
-| minimum observé | 0,31 |
-| médiane observée | 0,59 |
-| maximum observé | 0,83 |
+| espérance de la médiane de 20 probabilités | **0,500** |
+| écart-type de cette médiane | 0,043 |
+| intervalle de la médiane à t = 3,6 | **[0,345 ; 0,653]** (analyse du Juge) ; mon script recalcule [0,344 ; 0,656], identique à 0,003 près |
+| écart-type d'une probabilité (les 20 sont dispersées ainsi) | **≈ 0,15** |
+| probabilité avec une dérive **non significative** (\|t\| ≤ 1,96) | n'importe où dans **[0,22 ; 0,78]** |
 
-La raison est arithmétique : sur 16 000 trades, l'écart-type du R moyen réalisé vaut 1/√16000 = **0,0079 R**. Une dérive de cette taille, invisible au test de Student, se compose sur les ~600 journées que met la marche à toucher une barrière et déplace la probabilité de passage de moitié.
+Une dérive invisible au test de Student suffit donc à porter la probabilité de passage presque n'importe où entre 0,22 et 0,78, **sans biais** : la moyenne des échantillons retombe sur 0,5, c'est leur dispersion qui est le problème.
+
+La raison est arithmétique : sur 16 000 trades, l'écart-type du R moyen réalisé vaut 1/√16000 = **0,0079 R**. Une dérive de cette taille (t = 1), invisible au test de Student, se compose sur les ~600 journées que met la marche à toucher une barrière et déplace la probabilité de passage de 0,50 à ~0,66 (t = 1) ou ~0,78 (t = 1,96), dans un sens ou dans l'autre.
 
 **Conséquence de protocole.** Un rééchantillonnage des journées n'est pas un test d'avantage : il mesure l'avantage réalisé de cet échantillon-là, bruit compris. Deux corrections, à mettre dans le même geste :
 1. Toujours afficher, à côté du chiffre, la **même mesure sur l'échantillon centré** (le zéro de référence).
 2. Donner une **bande** obtenue en rééchantillonnant l'échantillon lui-même, pas seulement les journées à l'intérieur d'un échantillon figé.
 
-Sans cela, un backtest dont le R moyen est à un écart-type de zéro — c'est-à-dire indiscernable de rien — peut afficher 0,8 de probabilité de passage. C'est le mode de défaillance qui vient **après** celui de Colibri : Colibri fabriquait une population, celui-ci fabriquerait une confiance.
+Sans cela, un backtest dont le R moyen est à un écart-type de zéro — c'est-à-dire indiscernable de rien — peut afficher ~0,8 de probabilité de passage (ou ~0,2, avec la même fréquence). C'est le mode de défaillance qui vient **après** celui de Colibri : Colibri fabriquait une population, celui-ci fabriquerait une confiance.
 
 ### 1.3 Ce que les deux chiffres font ensemble
 
