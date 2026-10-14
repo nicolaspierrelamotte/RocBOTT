@@ -30,7 +30,8 @@ INTERDIT_LECTURE: dict[str, list[str]] = {
 
 # Préfixes de chemin AUTORISÉS en ÉCRITURE, par rôle (tout le reste est refusé).
 AUTORISE_ECRITURE: dict[str, list[str]] = {
-    "constructeur": ["/10_constructeur/", "/30_juge/entrees/"],
+    # Pour les campagnes de fiabilisation (fiab_*), le « code du Constructeur » est le dépôt lui-même.
+    "constructeur": ["/10_constructeur/", "/30_juge/entrees/", "/lab/", "/scripts/", "/tests/", "/docs/", "/.claude/hooks/"],
     "verificateur": ["/20_verificateur/objections.md"],
     "verificateur-bis": ["/20_verificateur/objections_bis.md"],
     "juge": ["/30_juge/"],
