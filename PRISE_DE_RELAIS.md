@@ -18,6 +18,7 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 | `docs/NOTE_REFLEXION_2026-09-19_session2.md` | note de la session 2 : le piège du critère de jugement, le budget de puissance des nombres ronds, la source Myfxbook. |
 | `docs/PROTOCOLE_ADDENDA_2026-09-19.md` | règles à inscrire au protocole, séparées en acceptées et proposées. |
 | `docs/ENVIRONNEMENT_ACCES_RESEAU.md` | pourquoi les sources sont inaccessibles depuis les sessions, le réglage exact à changer, et ce que l'enregistreur Myfxbook doit capter. **À passer au dev.** |
+| `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` | session du 14/10 : lecture du rapport d'audit du 13/10 (synthèse + 18 157 lignes), les trois causes que le rapport ne nomme pas (granularité journalière → n ≈ 70 événements ; financement de nuit = 85 % du coût ; débit de campagnes sans second lecteur), réponse à la question de fond (10-15 %/an), et proposition en quatre temps : geler, quatre tests de destruction en salle blanche, changement de terrain (intraday, niveaux focaux), preuve en avant. |
 | `lab/`, `tests/` | instruments de réflexion : marche à dérive nulle, avantage planté, détecteur d'acausalité, témoin, test de puissance, critère FTMO. Prototypes, pas une livraison de dev. |
 
 ## Ce qui a été établi ici, et qui ne vient d'aucune source extérieure
@@ -34,6 +35,13 @@ Conséquence à garder en tête : les faits marqués **[PRINCIPALE]** dans les d
 **L'enregistreur ne peut pas vivre dans une session infonuagique** : la machine virtuelle est récupérée après inactivité et tout ce qui tourne en arrière-plan meurt avec elle. Il lui faut un hôte permanent. Ce point est indépendant du réglage réseau : les deux chantiers avancent en parallèle.
 
 ## À l'arbitrage de Nicolas
+
+Ajouté le 14/10 (voir `docs/ANALYSE_AUDIT_1310_ET_PROPOSITION.md` §5) :
+
+- Tenir ici la **salle blanche** du temps 1 : recalcul des poches S02/S03 et témoin apparié en risque, sur données et code indépendants, chiffre attendu scellé d'avance. Avis : à faire en premier.
+- Écrire le pré-enregistrement de la campagne **nombres ronds** (liste gelée, constantes en unité de volatilité, date de décision).
+- Écrire la spécification du capteur **« péage aux franchissements »** pour les cinq bancs de démo.
+- Aucun challenge acheté avant le temps 3.
 
 Repris du relais §11, plus les ajouts de la session 2 :
 
