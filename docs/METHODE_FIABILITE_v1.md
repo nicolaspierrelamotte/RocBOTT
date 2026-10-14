@@ -127,3 +127,57 @@ Puis le temps 1 de l'analyse du 13/10, en salle blanche, ici.
 ## 9. Ce que cette méthode ne garantit pas
 
 Qu'un avantage existe. Elle garantit seulement que, s'il existe là où le projet regarde, il sera vu avec la puissance de le voir ; que s'il n'existe pas, le projet le saura et ne rouvrira pas sans donnée nouvelle ; et que s'il est hors de portée, le projet le dira au lieu de le déclarer mort. C'est moins qu'une promesse de gain. C'est plus que ce que le projet a eu jusqu'ici.
+
+## Annexe — Comparaison point par point avec la proposition reçue le 14/10
+
+Légende : **GARDÉ** = repris tel quel ; **CORRIGÉ** = l'intention est juste, l'exécution proposée ne l'est pas ; **REFUSÉ** = contredit un fait établi du registre ; **MANQUE** = absent de la proposition, présent dans la méthode.
+
+### 1. Méthode et organisation
+
+| proposition reçue | verdict | pourquoi |
+|---|---|---|
+| Séparer l'auteur du juge ; revue par une session distincte à consigne destructrice, ou par Nicolas | **GARDÉ** et précisé | La méthode ajoute ce qui rend la séparation réelle : la salle blanche (le juge ne voit pas le code), les étiquettes aveugles (il ne sait pas laquelle est l'hypothèse), et le chiffre attendu scellé avant. Une « session distincte » qui lit le même code et connaît le résultat espéré n'est pas distincte. |
+| Nouveau jeu de données (ticks d'un autre fournisseur, 2022-2026) verrouillé cryptographiquement, interrogé en fin de cycle | **REFUSÉ** | 2022-2026 est dans F2, lu par 400 campagnes ; les hypothèses y ont été formées. Un autre fournisseur sur les mêmes années teste la qualité de la donnée, pas la fraîcheur de l'hypothèse. La seule donnée vierge est le futur (relais du 19/09, réserve sur E6). Les enregistreurs en avant sont ce coffre-là, et ils tournent déjà. |
+| Blocage informatique strict : aucun test sans hypothèse, seuils et MDE scellés sur un serveur distant | **GARDÉ** et étendu | C'est la porte P1, déjà pratiquée (`PREENREGISTREMENT_MYFXBOOK_v1.md`, scellé par la poussée GitHub). La méthode ajoute : le blocage porte aussi sur la **publication** (P5, les quatre voisins), pas seulement sur l'exécution — c'est à la publication que les chiffres faux ont fait des dégâts. |
+| Ralentir : une hypothèse forte par semaine, validée manuellement | **GARDÉ** | Identique à T6 et au plafond de cadence. La méthode ajoute la raison chiffrée (8 défauts trouvés par les contrôles automatiques, 17 par Nicolas) et la fiche du vendredi qui rend la validation manuelle possible à coût fixe. |
+| — | **MANQUE** : le vocabulaire des verdicts et le calcul de puissance | La proposition ne protège que contre les faux positifs. Elle ne dit rien de l'autre erreur, aussi coûteuse : fermer une piste sans la puissance de la juger. Sans « INDÉCIDABLE POUR L'INSTANT » et sans parking, la proposition reproduirait les fermetures hâtives du rapport. |
+| — | **MANQUE** : la boucle d'apprentissage | Rien dans la proposition ne fait que la même erreur ne revienne pas. La méthode transforme le registre des erreurs en tests (R1), mesure le taux d'erreur par échantillon chaque mois (R3), et compte par mécanisme (R5). |
+| — | **MANQUE** : la consigne de fin de tour | La proposition ne touche pas à ce qui récompense l'optimisme du modèle. C'est pourtant la correction la moins chère et la plus décisive. |
+
+### 2. Technique
+
+| proposition reçue | verdict | pourquoi |
+|---|---|---|
+| Backtest exclusif au tick, BID et ASK séparés, pour franchissements et scalping ; mettre au rebut le moteur Peloille | **GARDÉ** pour le temps 2, avec une réserve | Nécessaire pour les événements de franchissement : sur barres M15 on reproduirait la fuite intra-barre de Wallaby. Dukascopy fournit les ticks BID/ASK gratuits depuis 2003. Réserve : le tick corrige la **résolution**, pas l'**acausalité logique** ; les deux fuites de septembre étaient dans la logique. Il faut le tick **et** le détecteur P4. « Mettre au rebut » est trop large : le moteur journalier sert encore au temps 1 (recalcul des poches en salle blanche). |
+| UTC brut à l'ingestion, fuseaux à l'exécution seulement | **GARDÉ** | Déjà dans la fiche enregistreur. Rien à ajouter. |
+| Coûts dynamiques : historiques de spreads, table stricte des swaps FTMO dans la fonction de fitness | **CORRIGÉ** | Modéliser finement un coût qu'on peut ne pas payer est la mauvaise réponse. Le swap fait 85 % du coût du robot ; la méthode choisit l'intraday à plat la nuit, qui le supprime. Ce qui reste à modéliser est le spread **à l'instant de l'événement**, mesuré par les bancs capteurs, pas un historique moyen. Le swap réellement débité reste une donnée de contrôle pour le temps 1. |
+| — | **MANQUE** : témoin à dérive nulle et avantage planté | La proposition n'a aucun dispositif qui teste la chaîne de mesure elle-même. C'est pourtant le seul qui ait vu Colibri. P3 et P2 sont les deux outils qui manquent le plus à la proposition. |
+| — | **MANQUE** : reproduire le chiffre publié avant de tester | Aucune des campagnes n'a vérifié que sa chaîne savait retrouver un effet connu. T2 est l'étalonnage absent. |
+
+### 3. Stratégie et infrastructure
+
+| proposition reçue | verdict | pourquoi |
+|---|---|---|
+| Pivoter vers l'intraday non directionnel | **GARDÉ** dans le principe | C'est la décision du 19/09 et le temps 2 de l'analyse du 13/10. L'accord s'arrête au mot « intraday ». |
+| Retour à la moyenne VWAP sur indices | **REFUSÉ** | Pas de volume réel sur CFD (DZ-04). L'article qui l'utilise dit lui-même que le VWAP n'est pas le moteur (Z-17 : Sharpe 1,17 sans contre 1,23 avec). Aucun perdant nommé (F4). C'est une méthode humaine re-codée, ce que le 19/09 a décidé d'arrêter. |
+| Faux breakout / balayage, « jouer le contre-pied institutionnel » aux ouvertures | **CORRIGÉ** | Le balayage est `turtle_soup.py`, déjà codé, exécutable sur FTMO. Mais la proposition **décide l'issue d'avance** (retournement). Le catalogue §5.6 dit le contraire : un événement, deux issues (cascade / balayage), et la campagne **mesure** laquelle domine et sous quelles conditions déclarées. Osler 2005 établit la cascade mécanique, pas la chasse intentionnelle. Décider l'issue avant de mesurer est exactement M1. |
+| Arbitrage statistique, neutre au marché | **REFUSÉ** | Tué le 06/09 (`RECHERCHE_FAMILLES_RESTANTES_0609.md` §1 et §7) : 14 séries corrélées à 0,85 valent 1,1 pari indépendant ; l'arbitrage statistique a besoin d'une coupe transversale. Et deux jambes tenues la nuit paient deux swaps. La neutralité au marché s'obtient autrement : intraday, à plat. |
+| Rouvrir Hibou (8-K lus par un modèle), affiner le prompt, corriger les horodatages SEC, tester sur petites capitalisations | **CORRIGÉ** | L'intention est juste : 86 % d'indéterminés et des horodatages décalés sont des défauts de mesure, pas une réfutation ; verdict correct = INDÉCIDABLE POUR L'INSTANT. Mais deux questions avant de rouvrir, que la proposition saute : les petites capitalisations américaines sont-elles tradables sur le véhicule du projet ? et un modèle qui lit un 8-K en secondes a-t-il une chance contre les lecteurs automatiques qui le font en millisecondes ? Si la réponse à la première est non, la piste est INDÉCIDABLE À JAMAIS sur ce véhicule. |
+| VPS Equinix LD4/NY4 à moins de 2 ms | **REFUSÉ** | FTMO interdit les « outils ultra-rapides » (relais §2). À 0,05 R par trade sur des événements de plusieurs minutes, 15 ms contre 2 ms ne change rien. Et c'est optimiser l'exécution d'un avantage qui n'existe pas encore : l'ordre est inversé. |
+| — | **MANQUE** : le catalogue des acteurs forcés | La proposition tire ses pistes d'un carnet de notes (VWAP, faux breakout, StatArb). La méthode les tire d'un perdant nommé (T1). C'est la différence entre une liste de motifs et une liste de mécanismes. |
+| — | **MANQUE** : le choix du terrain par la puissance | La proposition ne calcule nulle part combien d'événements chaque piste offre ni quand elle devient décidable (T3). C'est pourtant ce qui sépare les nombres ronds (700 000 événements) du robot journalier (70). |
+
+### 4. La question finale de la proposition
+
+« Commencer par l'architecture de backtest, ou par la modélisation d'une stratégie faux breakout / VWAP ? » — **ni l'un ni l'autre**. Les deux options construisent ; aucune ne juge. L'ordre est : geler et sécuriser, quatre tests de destruction en salle blanche, puis seulement le terrain. La question elle-même illustre M1 : elle est formulée pour qu'on réponde par une construction.
+
+### Bilan
+
+| | compte |
+|---|---|
+| gardé tel quel ou précisé | 5 |
+| corrigé | 4 |
+| refusé sur un fait du registre | 5 |
+| manquant dans la proposition | 7 |
+
+La proposition est juste sur l'organisation et sur deux points techniques (tick, UTC). Elle est fausse sur le hors-échantillon et sur trois des quatre pivots stratégiques, parce qu'elle n'a pas lu le registre. Et il lui manque toute la moitié de la méthode qui empêche de fermer trop vite et qui fait que le système apprend. Ce n'est pas un reproche à son auteur : c'est ce que produit n'importe quel modèle, celui-ci compris, quand rien ne l'oblige à lire avant de proposer. C'est M6, et c'est pour cela que « lire avant de proposer » est une règle de la méthode et non un conseil.
