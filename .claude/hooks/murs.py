@@ -355,7 +355,8 @@ VERBES_ECRITURE = re.compile(
     r"(>|\btee\b|\bsed\b[^|;&\n]*\s-\w*i|\bperl\b|\bpython[\d.]*\b|\bruby\b|\bnode\b|\bawk\b"
     r"|\bgit\s+(checkout|restore|stash|apply|reset|mv|rm|clean|switch)\b"
     r"|\b(mv|cp|rm|truncate|dd|install|ln|ed|ex|unlink|shred|touch|rsync)\b)")
-LECTEURS_RECURSIFS = re.compile(r"(?:^|[\s;|&(])(?:grep|egrep|fgrep|rg|ag|ack|find|tree|du|fd)\b|\bgit\s+grep\b")
+LECTEURS_RECURSIFS = {"rg", "ag", "ack", "find", "tree", "fd"}  # récursifs d'office
+GREPS = {"grep", "egrep", "fgrep"}  # récursifs avec -r / -R / --recursive
 CMDS_TOUTES_CIBLES = {"rm", "rmdir", "touch", "truncate", "mkdir", "chmod", "chown", "unlink", "shred", "tee", "mv"}
 CMDS_DERNIERE_CIBLE = {"cp", "install", "ln", "rsync"}
 CMDS_GIT_ECRITURE = {"checkout", "restore", "mv", "rm", "apply", "clean", "switch", "stash"}
@@ -366,9 +367,37 @@ def retire_heredocs(cmd: str):
     return RE_HEREDOC.sub(lambda m: "<<" + m.group(2) + "\n", cmd), corps
 
 
+def decoupe(cmd: str) -> list:
+    """Coupe aux séparateurs de commandes (; && || | & retour-ligne) HORS des chaînes citées."""
+    morceaux, cur, quote, i = [], [], "", 0
+    while i < len(cmd):
+        ch = cmd[i]
+        if quote:
+            cur.append(ch)
+            if ch == "\\" and quote == '"' and i + 1 < len(cmd):
+                cur.append(cmd[i + 1])
+                i += 1
+            elif ch == quote:
+                quote = ""
+        elif ch in "\"'":
+            quote = ch
+            cur.append(ch)
+        else:
+            m = RE_SEP.match(cmd, i)
+            if m and m.end() > i:
+                morceaux.append("".join(cur))
+                cur = []
+                i = m.end()
+                continue
+            cur.append(ch)
+        i += 1
+    morceaux.append("".join(cur))
+    return morceaux
+
+
 def commandes_simples(cmd: str) -> list:
     out = []
-    for morceau in RE_SEP.split(cmd):
+    for morceau in decoupe(cmd):
         morceau = morceau.strip()
         if not morceau:
             continue
@@ -437,6 +466,25 @@ def mots_chemins(cmd: str) -> list:
     return mots
 
 
+def perimetres_recursifs(cmd: str, cwd: str) -> list:
+    """Dossiers explorés par les commandes récursives de la ligne (rg, find, grep -r, git grep...).
+    Sans dossier cité, c'est le cwd. On regarde le NOM DE LA COMMANDE, pas le texte (« du Juge » n'est pas `du`)."""
+    out: list = []
+    for mots in commandes_simples(cmd):
+        while mots and re.fullmatch(r"[A-Za-z_]\w*=.*", mots[0]):
+            mots = mots[1:]
+        if not mots:
+            continue
+        nom, reste = os.path.basename(mots[0]), mots[1:]
+        recursif = (nom in LECTEURS_RECURSIFS
+                    or (nom in GREPS and any(re.fullmatch(r"-[a-zA-Z]*[rR][a-zA-Z]*|--recursive|--dereference-recursive", a) for a in reste))
+                    or (nom == "git" and reste[:1] == ["grep"]))
+        if recursif:
+            dossiers = [m for m in reste if m and os.path.isdir(m if os.path.isabs(m) else os.path.join(cwd, m))]
+            out += dossiers or [cwd]
+    return out
+
+
 def developpe(mot: str, cwd: str) -> list:
     if not re.search(r"[*?\[]", mot):
         return []
@@ -464,10 +512,8 @@ def controle_bash(cmd: str, cwd: str, racine: str, role: str, motifs: list) -> N
         for e in developpe(mot, cwd):
             verifie_chemin_lu(e, cwd, racine, motifs, role)
     # 3. Lecteurs récursifs (grep -r, rg, find, tree...) : le périmètre ne doit pas contenir de zone interdite.
-    if LECTEURS_RECURSIFS.search(cmd) or (re.search(r"\bgrep\b", cmd) and re.search(r"\s-[a-zA-Z]*[rR]\b|--recursive", cmd)):
-        dossiers = [m for m in mots if os.path.isdir(m if os.path.isabs(m) else os.path.join(cwd, m))]
-        for d in dossiers or [cwd]:
-            verifie_perimetre(d, cwd, racine, motifs, role)
+    for d in perimetres_recursifs(cmd, cwd):
+        verifie_perimetre(d, cwd, racine, motifs, role)
     # 4. Exécuter le code d'un dossier interdit revient à le lire.
     if "/lab" in motifs and re.search(r"(?:\b(?:import|from)\s+lab\b|-m\s+lab\b|\blab[./])", cmd):
         raise Refus(f"Mur {role} : importer ou lancer lab/ revient à le lire (zone interdite à ce rôle).")

@@ -73,8 +73,13 @@ def plant_edge(bars: Bars, signal: np.ndarray, edge_bp: float) -> Bars:
     ``signal[t]`` ∈ {-1, 0, +1} est la décision prise à la clôture de t.
     La barre t+1 est déformée après son ouverture (l'ouverture reste égale à la
     clôture de t) ; le niveau de prix décalé est conservé ensuite, comme le
-    ferait une vraie dérive. Sert au test de puissance : un pipeline qui ne
-    retrouve pas un avantage planté de x bp ne peut pas en détecter un réel.
+    ferait une vraie dérive.
+
+    ATTENTION (F-11) : c'est un SAUT à l'ouverture de t+1, planté sur toute
+    barre où ``signal[t] ≠ 0``, en position ou non, filtre ou non. « x bp » n'est
+    donc pas un avantage par trade. Ne sert plus au test de puissance
+    (``lab.control.power_curve`` plante l'avantage par trade, via la dérive de
+    ``random_walk_bars``) ; conservé comme outil bas niveau, testé tel quel.
     """
     signal = np.asarray(signal)
     if len(signal) != len(bars):

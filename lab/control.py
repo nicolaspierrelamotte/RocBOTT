@@ -222,7 +222,7 @@ def zero_drift_control(
 
     ``excess_r = mean_r - expected_r`` ; ``t_excess`` = t de Student de (R - expected_r)
     (R attendu traité comme constante ; son erreur-type est ``expected_r_se``, que
-    ``n_ref_paths`` — par défaut 3 × n_paths — rend petite). Un résultat sans
+    ``n_ref_paths`` — par défaut 5 × n_paths — rend petite). Un résultat sans
     trade ou à variance nulle porte ``t_excess = NaN`` et ``conclusive = False`` :
     ce n'est pas un témoin à zéro, c'est l'absence de témoin.
     """
@@ -232,7 +232,7 @@ def zero_drift_control(
         bars = random_walk_bars(n_bars, sigma_bp=sigma_bp, seed=int(rng.integers(2**31)))
         all_r.extend(tr.r for tr in pipeline.run_trades(bars))
     r = np.asarray(all_r, dtype=float)
-    n_ref = n_ref_paths if n_ref_paths is not None else 3 * n_paths
+    n_ref = n_ref_paths if n_ref_paths is not None else 5 * n_paths
     if len(r) < 2:
         return ControlResult(len(r), float("nan"), float("nan"), float("nan"), float("nan"), float("nan"),
                              float("nan"), float("nan"), float("nan"), pipeline.fingerprint(), int(seed))

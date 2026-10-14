@@ -5,7 +5,7 @@ Aucun état n'est modifié dans les fiches d'origine : cette note donne ma répo
 
 Principe commun : le hook compare maintenant des **segments de chemin résolus** (`realpath`, `..`, liens symboliques, chemin relatif résolu contre le `cwd` du JSON), jamais des sous-chaînes. Motif ancré à la racine du dépôt (`CLAUDE_PROJECT_DIR`) s'il commence par `/`, sinon valable n'importe où. Les chemins hors du dépôt (les `/x/...` fictifs de `tests/test_organisation.py`) sont comparés par suite de segments contiguë.
 
-Vérification des tests : `MURS_HOOK=<ancien hook> python3 -m pytest tests/test_murs.py` (ancien hook = `git show c9d69b9:.claude/hooks/murs.py`) donne 37 échecs sur 54 cas ; ce sont tous les cas de correction. Les 17 cas qui passent sur l'ancien hook sont des gardes de non-régression, nommés comme tels ci-dessous. Sur le nouveau : 54 passés.
+Vérification des tests : `MURS_HOOK=<ancien hook> python3 -m pytest tests/test_murs.py` (ancien hook = `git show c9d69b9:.claude/hooks/murs.py`) donne 38 échecs sur 54 cas ; ce sont tous les cas de correction. Les 16 cas qui passent sur l'ancien hook sont des gardes de non-régression, nommés comme tels ci-dessous. Sur le nouveau : 54 passés.
 
 ## F-1 — le mur du Juge ne couvrait ni `lab/`, ni `tests/`, ni le registre
 - état : traitée (sauf ce qui reste, ci-dessous).
@@ -66,6 +66,7 @@ Vérification des tests : `MURS_HOOK=<ancien hook> python3 -m pytest tests/test_
   - Outils absents de ma liste de verbes : `cat > f`, oui, mais `python3 -c` avec `shutil.move` sur un chemin construit, `curl -o`, `wget -O`, `unzip`, `tar x`, `git pull`, `git merge`, `git commit -a` (qui enregistre mais ne réécrit pas le fichier), `patch`, `ed`-like via `vim -c`, `xargs rm`, `find -delete`.
   - Heredoc dont le terminateur est mal formé : le corps n'est alors pas retiré avant l'analyse des redirections (faux positifs ou négatifs).
   - Faux positifs connus : un `>` ou `->` dans un heredoc ou dans une chaîne cité comme cible (`a -> b` donne `b`), un chemin avec `/` dans un `python -c` (même une division `a/b`) traité comme cible d'écriture. Choisis exprès : un refus se contourne en écrivant autrement.
+  - Constaté pendant la construction, sur moi-même : un `<adresse@...>` dans un message de commit (redirection prise pour `>`), un `;` dans une chaîne citée, et une URL (`https://x.y/z`) dans un heredoc `python3 -` ont d'abord été refusés. Les deux premiers sont corrigés (redirections lues hors des chaînes citées ; coupure aux séparateurs hors guillemets), avec test. Le troisième est le faux positif assumé « tout chemin cité par du code en ligne est une cible » : il reste.
   - Le pré-enregistrement est toujours réécrivable par la **session principale** (aucun mur, voulu) et par un script du Greffier ; le contrôle d'empreinte à la porte P1 (F-6, F-9) n'est pas de mon lot.
   - Le Greffier n'a pas de liste blanche d'écriture (règle conservée de l'ancien hook) : il écrit partout sauf le sceau.
   - Pas testé : `NotebookEdit` (même code que Write, via `notebook_path`).

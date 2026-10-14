@@ -304,7 +304,9 @@ def test_f21_bash_ecrit_dans_les_zones_permises(depot):
                      # un « <adresse> » dans un message de commit n'est pas une redirection
                      "git commit -m \"msg\n\nCo-Authored-By: A <a@b.fr>\nClaude-Session: https://x.y/z\" -- tests/test_x.py",
                      "echo \"a -> b\" > lab/note.txt",
-                     "echo x > \"lab/mon fichier.txt\""):
+                     "echo x > \"lab/mon fichier.txt\"",
+                     "sed -i 's/ca ; fait 37 cas/ok/' lab/control.py",  # « ; » dans une chaîne citée : pas un séparateur
+                     ):
         assert libre(lance(depot, "constructeur", "Bash", {"command": commande})), commande
     assert refuse(lance(depot, "constructeur", "Bash", {"command": "echo x > \"registre/mon fichier.md\""}))
     assert libre(lance(depot, "greffier", "Bash", {"command": "echo x > registre/parking.md"}))
