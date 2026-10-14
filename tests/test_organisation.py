@@ -63,6 +63,16 @@ def test_constructeur_ne_voit_pas_le_verdict_et_personne_ne_reecrit_le_preenregi
         assert refuse(hook(role, "Edit", {"file_path": "/x/campagnes/c1/00_preenregistrement.md"}))
 
 
+def test_chef_de_projet_et_createur_ecrivent_chez_eux_seulement():
+    assert hook("chef_de_projet", "Write", {"file_path": "/x/suivi/plan.md"}) is None
+    assert refuse(hook("chef_de_projet", "Write", {"file_path": "/x/registre/registre.jsonl"}))
+    assert refuse(hook("chef_de_projet", "Edit", {"file_path": "/x/campagnes/c1/30_juge/verdict.md"}))
+    assert hook("createur", "Write", {"file_path": "/x/idees/2026-10-15_ronds.md"}) is None
+    assert refuse(hook("createur", "Write", {"file_path": "/x/campagnes/c1/00_preenregistrement.md"}))
+    assert refuse(hook("createur", "Read", {"file_path": "/x/campagnes/c1/10_constructeur/resultats/r.csv"}))
+    assert hook("createur", "Read", {"file_path": "/x/registre/parking.md"}) is None
+
+
 def test_session_principale_sans_mur():
     assert hook("", "Read", {"file_path": "/x/campagnes/c1/40_greffier/cle_aveugle.json"}) is None
 

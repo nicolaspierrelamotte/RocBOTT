@@ -24,6 +24,8 @@ INTERDIT_LECTURE: dict[str, list[str]] = {
     "juge": ["/10_constructeur/", "/20_verificateur/", "cle_aveugle", "/coffre/", "onedrive", "OneDrive"],
     "rapporteur": ["cle_aveugle", "/coffre/"],
     "greffier": ["/coffre/"],
+    "chef_de_projet": ["cle_aveugle", "/coffre/"],
+    "createur": ["cle_aveugle", "/coffre/", "/resultats/"],
 }
 
 # Préfixes de chemin AUTORISÉS en ÉCRITURE, par rôle (tout le reste est refusé).
@@ -33,6 +35,8 @@ AUTORISE_ECRITURE: dict[str, list[str]] = {
     "verificateur-bis": ["/20_verificateur/objections_bis.md"],
     "juge": ["/30_juge/"],
     "rapporteur": ["/fiches/"],
+    "chef_de_projet": ["/suivi/"],
+    "createur": ["/idees/"],
     # greffier : pas de restriction d'écriture, sauf les chemins ci-dessous.
 }
 INTERDIT_ECRITURE_TOUS = ["/00_preenregistrement.md"]  # scellé : personne ne le réécrit par un outil

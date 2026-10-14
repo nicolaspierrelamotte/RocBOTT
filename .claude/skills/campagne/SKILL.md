@@ -1,6 +1,6 @@
 ---
 name: campagne
-description: Conduit une campagne du laboratoire de bout en bout (pré-enregistrement scellé, Constructeur, deux Vérificateurs, aveuglement, Juge, publication, fiche) sans que Nicolas fasse un seul geste technique. Il répond en français et dit « oui » avant le Juge. Usage - /campagne nouvelle "<idée en une phrase>" ; /campagne continuer <id> ; /campagne etat ; /campagne vendredi ; /campagne mois.
+description: Conduit une campagne du laboratoire de bout en bout (pré-enregistrement scellé, Constructeur, deux Vérificateurs, aveuglement, Juge, publication, fiche) sans que Nicolas fasse un seul geste technique. Il répond en français et dit « oui » avant le Juge. Usage - /campagne nouvelle "<idée en une phrase>" ; /campagne continuer <id> ; /campagne etat ; /campagne vendredi ; /campagne mois ; /campagne fiabilisation ; /campagne idees "<thème>" ; /campagne suivi.
 ---
 
 # /campagne — la procédure, exécutée par la session principale
@@ -43,6 +43,25 @@ Lance `rapporteur` pour `fiches/fiche_<date>.md`, puis donne la fiche à Nicolas
 ## /campagne mois
 
 Lance `greffier` pour l'audit par échantillon (`scripts/greffier_echantillon.py`), crée `campagnes/audit_<mois>/` et lance `juge` sur chaque fait tiré ; puis `rapporteur` pour `fiches/mois_<AAAA-MM>.md`. Donne la phrase du mois à Nicolas.
+
+## /campagne fiabilisation
+
+Passe de fiabilisation de l'existant, décidée par Nicolas le 15/10 : **avant toute idée nouvelle, refaire une passe sur ce qui a été produit.** Une campagne d'audit, pas d'hypothèse : `campagnes/fiab_<nnn>_<objet>/`.
+1. **Chef de projet** : inventaire des affirmations encore en vigueur dans le périmètre (faits, chiffres publiés, verdicts, familles fermées), chacune avec : note A-E, MDE présent ou non, pré-enregistrée ou non, dépendances. Écrit dans `suivi/`.
+2. **Deux Vérificateurs en parallèle** sur le code du périmètre, sans voir les résultats.
+3. **Juge** : recalcul en salle blanche des chiffres publiés, à partir de leur description en prose seulement, contre le chiffre scellé (le chiffre publié). Verdict par chiffre : REPRODUIT / ÉCART À COMPRENDRE / NON REPRODUCTIBLE.
+4. **Greffier** : requalification de chaque fermeture sans MDE en INDÉCIDABLE POUR L'INSTANT avec condition ; propagation des invalidations ; chaque erreur trouvée devient un test.
+5. **Créateur** : propositions de méthode pour que ces erreurs ne reviennent pas (`idees/methode_*.md`), chacune avec sa mesure de succès.
+6. **Rapporteur** : la fiche, avec le taux d'erreur mesuré.
+Périmètre par défaut, sans accès au laboratoire OneDrive : ce dépôt lui-même (`lab/`, `scripts/`, `.claude/hooks/`, les chiffres des notes de `docs/`). Avec accès OneDrive : le registre des 538 campagnes, par ordre de conséquence (ce qui sert encore à décider d'abord).
+
+## /campagne idees "<thème>"
+
+Lance `createur` sur le thème. Puis `chef_de_projet` pour inscrire les pistes au backlog, et `rapporteur` pour les présenter. Tu ne classes pas les pistes toi-même. Règle de Nicolas du 15/10 : pas d'idée nouvelle tant que la passe de fiabilisation n'est pas faite ; si on te demande des idées avant, rappelle-le et demande confirmation.
+
+## /campagne suivi
+
+Lance `chef_de_projet` pour mettre à jour `suivi/` et donne à Nicolas son ordre du jour (au plus cinq lignes).
 
 ## Règles qui ne se négocient pas
 - Une campagne par semaine, deux au plus. Si Nicolas en demande une troisième, dis-le et demande laquelle attend.
