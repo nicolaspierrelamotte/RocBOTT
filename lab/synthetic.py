@@ -37,6 +37,28 @@ class Bars:
         )
 
 
+def draw_steps(n_bars: int, *, sigma_bp: float, seed: int | np.random.Generator, steps_per_bar: int = 20) -> np.ndarray:
+    """Pas gaussiens d'une marche : ``(n_bars, steps_per_bar)``, écart-type par barre ``sigma_bp``."""
+    rng = np.random.default_rng(seed)
+    step_sigma = sigma_bp * BP / np.sqrt(steps_per_bar)
+    return rng.normal(0.0, step_sigma, size=(n_bars, steps_per_bar))
+
+
+def bar_from_steps(open_price: float, steps_row: np.ndarray, drift_bp: float = 0.0) -> tuple[float, float, float, float]:
+    """Une barre (O, H, L, C) à partir de ses pas et d'une dérive (bp pour la barre entière).
+
+    Même arithmétique que ``random_walk_bars`` : sert à générer une marche barre
+    par barre quand la dérive dépend de la position tenue (test de puissance).
+    """
+    path = np.cumprod(1.0 + steps_row + drift_bp * BP / len(steps_row))
+    return (
+        float(open_price),
+        float(open_price * max(1.0, path.max())),
+        float(open_price * min(1.0, path.min())),
+        float(open_price * path[-1]),
+    )
+
+
 def random_walk_bars(
     n_bars: int,
     *,
@@ -52,10 +74,8 @@ def random_walk_bars(
     ``drift_bp`` (scalaire ou tableau de taille ``n_bars``) est la dérive
     moyenne par barre ; 0 = témoin à dérive nulle.
     """
-    rng = np.random.default_rng(seed)
+    steps = draw_steps(n_bars, sigma_bp=sigma_bp, seed=seed, steps_per_bar=steps_per_bar)
     drift = np.broadcast_to(np.asarray(drift_bp, dtype=float), (n_bars,)) * BP
-    step_sigma = sigma_bp * BP / np.sqrt(steps_per_bar)
-    steps = rng.normal(0.0, step_sigma, size=(n_bars, steps_per_bar))
     steps += (drift / steps_per_bar)[:, None]
     # Chemin intra-barre en rendement simple cumulé, ancré sur l'ouverture.
     path = np.cumprod(1.0 + steps, axis=1)

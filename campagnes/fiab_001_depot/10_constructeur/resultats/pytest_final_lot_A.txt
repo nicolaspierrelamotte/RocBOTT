@@ -1,0 +1,90 @@
+........................................................................ [ 38%]
+........................F....F..F....................................... [ 77%]
+..........................................                               [100%]
+=================================== FAILURES ===================================
+______ test_publier_exige_la_fusion_quand_deux_verificateurs_sont_passes _______
+
+campagne = (PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_exige_la_fusion_q0/repo'), PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_exige_la_fusion_q0/repo/campagnes/c1'))
+
+    def test_publier_exige_la_fusion_quand_deux_verificateurs_sont_passes(campagne):
+        repo, d = campagne
+        (d / "20_verificateur/objections_bis.md").write_text("### O-1\n- gravité : basse\n- état : ouverte\n")
+        fermees = greffier_publier.verifier(d, racine_git=repo)
+        assert any("fusion.md" in f for f in fermees)
+        (d / "20_verificateur/fusion.md").write_text("| taux | 0,5 |\n")
+>       assert not greffier_publier.verifier(d, racine_git=repo)
+E       assert not ["P3 : champs manquants dans temoin_derive_nulle.json ['n_trades', 'mean_r', 'expected_r', 'excess_r', 't_excess', 'pipeline', 'graine']", "P4 : champs manquants dans acausalite.json ['n_checked', 'pipeline', 'graine']"]
+E        +  where ["P3 : champs manquants dans temoin_derive_nulle.json ['n_trades', 'mean_r', 'expected_r', 'excess_r', 't_excess', 'pipeline', 'graine']", "P4 : champs manquants dans acausalite.json ['n_checked', 'pipeline', 'graine']"] = <function verifier at 0x7f2ce76ccc20>(PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_exige_la_fusion_q0/repo/campagnes/c1'), racine_git=PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_exige_la_fusion_q0/repo'))
+E        +    where <function verifier at 0x7f2ce76ccc20> = greffier_publier.verifier
+
+test_organisation.py:49: AssertionError
+___________ test_publier_passe_quand_toutes_les_portes_sont_ouvertes ___________
+
+campagne = (PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_passe_quand_toute0/repo'), PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_passe_quand_toute0/repo/campagnes/c1'))
+
+    def test_publier_passe_quand_toutes_les_portes_sont_ouvertes(campagne):
+        repo, d = campagne
+>       e = greffier_publier.publier(d, racine_git=repo, registre=repo / "registre")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test_organisation.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+d = PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_passe_quand_toute0/repo/campagnes/c1')
+racine_git = PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_passe_quand_toute0/repo')
+registre = PosixPath('/tmp/pytest-of-root/pytest-31/test_publier_passe_quand_toute0/repo/registre')
+
+    def publier(d: Path, racine_git: Path | None = None, registre: Path | None = None) -> dict:
+        fermees = verifier(d, racine_git)
+        if fermees:
+>           raise SystemExit("REFUS DE PUBLICATION\n" + "\n".join(f"  - {f}" for f in fermees))
+E           SystemExit: REFUS DE PUBLICATION
+E             - P3 : champs manquants dans temoin_derive_nulle.json ['n_trades', 'mean_r', 'expected_r', 'excess_r', 't_excess', 'pipeline', 'graine']
+E             - P4 : champs manquants dans acausalite.json ['n_checked', 'pipeline', 'graine']
+
+../scripts/greffier_publier.py:240: SystemExit
+_________________ test_aveugler_cache_la_cle_jusqu_au_verdict __________________
+
+campagne = (PosixPath('/tmp/pytest-of-root/pytest-31/test_aveugler_cache_la_cle_jus0/repo'), PosixPath('/tmp/pytest-of-root/pytest-31/test_aveugler_cache_la_cle_jus0/repo/campagnes/c1'))
+
+    def test_aveugler_cache_la_cle_jusqu_au_verdict(campagne):
+        repo, d = campagne
+        (d / "30_juge/verdict.md").unlink()
+        (d / "30_juge/entrees/hypothese.csv").write_text("1\n2\n")
+        (d / "30_juge/entrees/temoin.csv").write_text("3\n4\n")
+        cle = greffier_aveugler.aveugler(d)
+        assert {cle["A"], cle["B"]} == {"hypothese.csv", "temoin.csv"}
+        assert not (d / "30_juge/entrees/hypothese.csv").exists()
+        assert (d / "30_juge/series_aveugles/A.csv").exists()
+        with pytest.raises(SystemExit):
+            greffier_aveugler.reveler(d)
+        (d / "30_juge/verdict.md").write_text("TROUVÉ")
+>       assert greffier_aveugler.reveler(d)["sha256_A"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test_organisation.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+d = PosixPath('/tmp/pytest-of-root/pytest-31/test_aveugler_cache_la_cle_jus0/repo/campagnes/c1')
+racine_git = None
+
+    def reveler(d: Path, racine_git: Path | None = None) -> dict:
+        """La clé ne sort que si verdict.md est commité ET identique à sa version commitée.
+    
+        Un fichier qui existe sur le disque n'est pas un verdict rendu : le Juge peut y écrire un brouillon,
+        et le Greffier ne doit pas pouvoir être amené à révéler la clé avant que le verdict soit figé par git.
+        """
+        v = d / "30_juge/verdict.md"
+        if not v.exists():
+            raise SystemExit("pas de verdict.md : la clé reste scellée")
+        commite = contenu_au_commit(v, "HEAD", cwd=racine_git)
+        if commite is None:
+>           raise SystemExit("verdict.md n'est pas commité : la clé reste scellée")
+E           SystemExit: verdict.md n'est pas commité : la clé reste scellée
+
+../scripts/greffier_aveugler.py:61: SystemExit
+=========================== short test summary info ============================
+FAILED test_organisation.py::test_publier_exige_la_fusion_quand_deux_verificateurs_sont_passes
+FAILED test_organisation.py::test_publier_passe_quand_toutes_les_portes_sont_ouvertes
+FAILED test_organisation.py::test_aveugler_cache_la_cle_jusqu_au_verdict - Sy...
+3 failed, 183 passed in 121.04s (0:02:01)

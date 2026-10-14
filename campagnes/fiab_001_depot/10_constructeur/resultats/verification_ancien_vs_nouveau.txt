@@ -1,0 +1,26 @@
+lab importé depuis /home/user/RocBOTT/campagnes/fiab_001_depot/10_constructeur/resultats/ancien_lab/lab/__init__.py
+F-4 stop sur gap                                        R stop sur gap = -1.00 (DÉFAUT : attendu -5)
+F-4 zéro du témoin, stop 10 / objectif 30               R brut +0.0510 vs attendu -0.0000, t = +5.25 : DÉFAUT (zéro faux)
+F-5 pipeline propre, péage non nul                      critère = -8.73 (refusé à tort)
+F-5 fuite de l'ordre du péage                           critère = -2.20 (fuite laissée passer)
+F-2 detect_leak(Pipeline)                               ERREUR TypeError: 'Pipeline' object is not callable
+F-2 decide = signal seul                                decide = signal seul : n_changed = 0 (attendu 0 des deux côtés : un signal nu ne porte pas le filtre ; d'où Pipeline.decide)
+F-7 demi-écart bid/ask                                  ERREUR TypeError: simulate_trades() got an unexpected keyword argument 'half_spread_bp'
+F-12 creux intra-journalier fourni                      ERREUR TypeError: barrier_probability() got an unexpected keyword argument 'daily_low'
+F-12 clôtures seules                                    p_daily_loss = 0.0 sur clôtures seules (aucun champ ne dit que le creux est ignoré)
+F-26 t pour sd=0, R<0                                   inf
+F-8 courbe de puissance par probabilité                 ERREUR ImportError: cannot import name 'power_curve' from 'lab.control' (/home/user/RocBOTT/campagnes/fiab_001
+----
+lab importé depuis /home/user/RocBOTT/lab/__init__.py
+F-4 stop sur gap                                        R stop sur gap = -5.00 (ok)
+F-4 zéro du témoin, stop 10 / objectif 30               t_excess = -1.56 (ok)
+F-5 pipeline propre, péage non nul                      critère = -1.02 (ok : pipeline propre accepté)
+F-5 fuite de l'ordre du péage                           critère = +6.17 (ok : fuite signalée)
+F-2 detect_leak(Pipeline)                               n_changed = 21 / 100 (ok : fuite signalée)
+F-2 decide = signal seul                                decide = signal seul : n_changed = 0 (attendu 0 des deux côtés : un signal nu ne porte pas le filtre ; d'où Pipeline.decide)
+F-7 demi-écart bid/ask                                  1
+F-12 creux intra-journalier fourni                      1.0
+F-12 clôtures seules                                    p_daily_loss = 0.0 sur clôtures seules (aucun champ ne dit que le creux est ignoré) ; equity_basis = close_only
+F-26 t pour sd=0, R<0                                   nan
+F-8 courbe de puissance par probabilité                 power_curve présent
+----

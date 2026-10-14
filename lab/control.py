@@ -48,8 +48,10 @@ from typing import Callable, Sequence
 
 import numpy as np
 
-from .simulate import ACAUSAL_FILTERS, PopulationFilter, Trade, decisions, r_stats, simulate_trades
-from .synthetic import Bars, random_walk_bars
+from .simulate import (
+    ACAUSAL_FILTERS, Costs, PopulationFilter, Position, Trade, decision_at, decisions, r_stats, simulate_trades,
+)
+from .synthetic import Bars, bar_from_steps, draw_steps, random_walk_bars
 
 Signal = Callable[[Bars], np.ndarray]
 
@@ -106,6 +108,9 @@ class Pipeline:
             stop_slippage_bp=self.stop_slippage_bp,
         )
 
+    def costs(self) -> Costs:
+        return Costs(**self._sim_kwargs())
+
     def decide(self, bars: Bars) -> np.ndarray:
         """Décision par barre, signal ET filtre composés comme ``simulate_trades`` les applique."""
         return decisions(bars, self.signal(bars), self.population_filter)
@@ -155,6 +160,7 @@ class NullReference:
     n_trades: int
     expected_r: float
     expected_r_se: float
+    mean_hold: float  # durée moyenne tenue (barres) sous le nul : sert à calibrer l'avantage planté
 
 
 def expected_r_under_null(
@@ -178,16 +184,18 @@ def expected_r_under_null(
         raise ValueError("reference_filter ∈ {'none', 'pipeline'}")
     rng = np.random.default_rng(np.random.SeedSequence([int(seed), 7919]))
     all_r: list[float] = []
+    holds: list[int] = []
     for _ in range(n_paths):
         bars = random_walk_bars(n_bars, sigma_bp=sigma_bp, seed=int(rng.integers(2**31)))
         base = np.sign(np.asarray(pipeline.signal(bars)))
         coin = rng.choice(np.array([-1, 1]), size=len(bars))
         trades = pipeline.run_trades(bars, signal=base * coin, with_filter=(reference_filter == "pipeline"))
         all_r.extend(tr.r for tr in trades)
+        holds.extend(tr.exit_bar - tr.entry_bar + 1 for tr in trades)
     r = np.asarray(all_r, dtype=float)
     if len(r) < 2:
         raise InconclusiveError("référence nulle sans trades : le pipeline ne trade pas sur du bruit")
-    return NullReference(len(r), float(r.mean()), float(r.std(ddof=1) / np.sqrt(len(r))))
+    return NullReference(len(r), float(r.mean()), float(r.std(ddof=1) / np.sqrt(len(r))), float(np.mean(holds)))
 
 
 @dataclass(frozen=True)
@@ -350,25 +358,86 @@ def _wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 @dataclass(frozen=True)
 class PowerResult:
-    edge_bp: float  # avantage nominal planté, par trade
+    edge_bp: float  # avantage nominal par trade (bp), en moyenne : dérive par barre tenue = edge_bp / durée moyenne nulle
     n_trades: int  # trades par répétition
     n_reps: int
     detection_probability: float
     ci_low: float  # Wilson 95 %
     ci_high: float
-    realised_edge_bp: float  # mesuré : moyenne de sens × dérive plantée sur les barres de chaque trade
+    realised_edge_bp: float  # mesuré : moyenne, sur les trades, de (sens × dérive plantée sur les barres tenues)
     mean_r: float  # moyenne, sur les répétitions, du R moyen
     expected_r: float
     mean_t_excess: float
+    drift_per_held_bar_bp: float
 
 
-def _plant_per_trade_drift(trades: list[Trade], n_bars: int, edge_bp: float) -> np.ndarray:
-    """Dérive par barre (bp, signée) : edge_bp par trade, étalé sur les barres tenues, dans le sens du trade."""
-    d = np.zeros(n_bars)
-    for tr in trades:
-        held = tr.exit_bar - tr.entry_bar + 1
-        d[tr.entry_bar : tr.exit_bar + 1] += tr.direction * edge_bp / held
-    return d
+def online_planted_path(
+    pipeline: Pipeline, steps: np.ndarray, *, drift_per_held_bar_bp: float, start: float = 100.0
+) -> tuple[Bars, list[Trade], list[float]]:
+    """Marche générée barre par barre ; la dérive suit la position tenue, dans son sens.
+
+    Aucune dérive hors position : à chaque clôture t, avec position nulle, le
+    signal est calculé sur les barres 0..t seules, la barre d'entrée est tirée
+    (avec la dérive du sens décidé) puis le filtre de population la reçoit, et
+    chaque barre tenue est tirée avec la dérive du sens de la position jusqu'au
+    stop, à l'objectif ou à la durée maximale. Ni saut à l'ouverture, ni dérive
+    hors du trade. Valable pour un signal et un filtre CAUSAUX (le signal est
+    évalué sur un préfixe) ; un pipeline acausal n'a pas de sens ici.
+
+    Renvoie les barres, les trades, et l'avantage planté de chaque trade
+    (bp, dans son sens). Avec ``drift_per_held_bar_bp = 0`` la mécanique est
+    celle de ``simulate_trades`` sur ces barres (testé).
+    """
+    n = len(steps)
+    o, h, lo, c = (np.empty(n) for _ in range(4))
+    filled = 0
+
+    def gen(k: int, drift: float) -> None:
+        nonlocal filled
+        assert k <= filled, "génération hors ordre"
+        prev = start if k == 0 else c[k - 1]
+        o[k], h[k], lo[k], c[k] = bar_from_steps(prev, steps[k], drift)
+        filled = max(filled, k + 1)
+
+    def view(upto: int) -> Bars:
+        return Bars(o[:upto], h[:upto], lo[:upto], c[:upto])
+
+    costs = pipeline.costs()
+    trades: list[Trade] = []
+    planted: list[float] = []
+    t = 0
+    while t < n - 1:
+        while filled <= t:
+            gen(filled, 0.0)
+        sig = np.asarray(pipeline.signal(view(t + 1)))
+        s = int(np.sign(sig[t])) if len(sig) == t + 1 else 0
+        if s == 0:
+            t += 1
+            continue
+        entry = t + 1
+        gen(entry, s * drift_per_held_bar_bp)
+        if decision_at(view(entry + 1), s, t, pipeline.population_filter) == 0:
+            gen(entry, 0.0)  # rejeté : l'entrée n'a pas eu lieu, pas de dérive sur cette barre
+            t += 1
+            continue
+        pos = Position(Bars(o, h, lo, c), entry, s, costs)
+        exit_bar = min(entry + pipeline.max_hold - 1, n - 1)
+        exit_price = None
+        for k in range(entry, exit_bar + 1):
+            if k > entry:
+                gen(k, s * drift_per_held_bar_bp)
+            exit_price = pos.check(Bars(o, h, lo, c), k)
+            if exit_price is not None:
+                exit_bar = k
+                break
+        if exit_price is None:
+            exit_price = pos.time_exit_price(Bars(o, h, lo, c), exit_bar)
+        trades.append(Trade(t, entry, exit_bar, s, pos.r(exit_price, exit_bar)))
+        planted.append(drift_per_held_bar_bp * (exit_bar - entry + 1))
+        t = exit_bar + 1
+    while filled < n:
+        gen(filled, 0.0)
+    return Bars(o, h, lo, c), trades, planted
 
 
 def power_curve(
@@ -380,66 +449,58 @@ def power_curve(
     sigma_bp: float,
     seed: int,
     t_threshold: float,
-    n_bars: int = 2_000,
+    n_bars: int = 1_500,
     max_paths_per_rep: int = 200,
     n_ref_paths: int = 60,
 ) -> list[PowerResult]:
     """Probabilité de détecter un avantage planté par trade, pour ``n_trades`` trades.
 
-    Pour chaque répétition (graine propre, indépendante des autres ; les mêmes
-    répétitions servent à tous les avantages, tirages communs documentés) :
-    1. des marches brutes de ``n_bars`` barres sont tirées jusqu'à obtenir
-       ``n_trades`` trades ;
-    2. première passe : le pipeline tourne sur la marche brute ; chaque trade
-       reçoit ``edge_bp`` de rendement additionnel, étalé sur ses barres tenues,
-       dans son sens ;
-    3. deuxième passe : le MÊME bruit plus cette dérive ; le pipeline recalcule
-       son signal et son filtre et tourne ; les ``n_trades`` premiers trades
-       sont jugés ;
-    4. détecté ⇔ t de (R - R attendu) > ``t_threshold``, R attendu calculé par
-       ``expected_r_under_null`` (traité comme connu).
-    L'avantage 0 donne le taux de faux positifs. La probabilité de détection
-    est la part de répétitions détectées ; l'avantage réalisé est mesuré sur
-    les trades de la deuxième passe (sens du trade × dérive plantée sur ses
-    barres), car le pipeline peut ne pas retomber sur les positions de la première.
+    Une répétition tire des marches de ``n_bars`` barres (graine propre,
+    indépendante des autres répétitions ; les MÊMES pas servent à tous les
+    avantages d'une répétition, tirages communs documentés) jusqu'à avoir
+    ``n_trades`` trades, puis juge les ``n_trades`` premiers : détecté ⇔ t de
+    (R - R attendu) > ``t_threshold``, R attendu calculé par
+    ``expected_r_under_null`` et traité comme connu. L'avantage planté est une
+    dérive dans le sens de la position, pendant les barres où elle est tenue
+    (``online_planted_path``), de ``edge_bp / durée moyenne nulle`` bp par barre
+    tenue : en moyenne, ``edge_bp`` par trade. La valeur réalisée est MESURÉE sur
+    les trades et rapportée à côté. L'avantage 0 donne le taux de faux positifs.
+
+    Le résultat est une probabilité de détection avec intervalle de Wilson, pas
+    un booléen. Elle dépend de ``n_trades`` : le donner à la taille de
+    l'échantillon réel de la campagne (F-8).
     """
     ref = expected_r_under_null(pipeline, n_paths=n_ref_paths, n_bars=n_bars, sigma_bp=sigma_bp, seed=seed)
     seeds = np.random.SeedSequence(int(seed)).spawn(n_reps)
+    drift_unit = 1.0 / ref.mean_hold
     per_edge = {float(e): {"det": 0, "r": [], "t": [], "real": []} for e in edges_bp}
     for ss in seeds:
         rng = np.random.default_rng(ss)
-        path_seeds: list[int] = []
-        raws: list[Bars] = []
-        pass1: list[list[Trade]] = []
+        steps_list: list[np.ndarray] = []
         total = 0
-        while total < int(np.ceil(1.2 * n_trades)):
-            if len(raws) >= max_paths_per_rep:
+        while total < n_trades:
+            if len(steps_list) >= max_paths_per_rep:
                 raise InconclusiveError(f"moins de {n_trades} trades après {max_paths_per_rep} chemins")
-            s = int(rng.integers(2**31))
-            bars = random_walk_bars(n_bars, sigma_bp=sigma_bp, seed=s)
-            tr = pipeline.run_trades(bars)
-            path_seeds.append(s)
-            raws.append(bars)
-            pass1.append(tr)
-            total += len(tr)
+            st = draw_steps(n_bars, sigma_bp=sigma_bp, seed=int(rng.integers(2**31)))
+            steps_list.append(st)
+            total += len(online_planted_path(pipeline, st, drift_per_held_bar_bp=0.0)[1])
         for e in edges_bp:
             rs: list[float] = []
             real: list[float] = []
-            for s, raw, tr1 in zip(path_seeds, raws, pass1):
-                d = _plant_per_trade_drift(tr1, n_bars, float(e))
-                planted = random_walk_bars(n_bars, sigma_bp=sigma_bp, seed=s, drift_bp=d)
-                tr2 = pipeline.run_trades(planted)
-                rs.extend(t.r for t in tr2)
-                real.extend(t.direction * d[t.entry_bar : t.exit_bar + 1].sum() for t in tr2)
-            if len(rs) < n_trades:  # la deuxième passe peut perdre quelques trades : on complète pas, on signale
-                raise InconclusiveError(f"deuxième passe: {len(rs)} trades < {n_trades}")
-            r = np.asarray(rs[:n_trades], dtype=float)
+            for st in steps_list:
+                _, tr, pl = online_planted_path(pipeline, st, drift_per_held_bar_bp=float(e) * drift_unit)
+                rs.extend(t.r for t in tr)
+                real.extend(pl)
+            m = min(len(rs), n_trades)
+            if m < n_trades:
+                raise InconclusiveError(f"avantage {e} : {len(rs)} trades < {n_trades}")
+            r = np.asarray(rs[:m], dtype=float)
             t = _t_one_sample(r, ref.expected_r)
             slot = per_edge[float(e)]
             slot["det"] += int(np.isfinite(t) and t > t_threshold)
             slot["r"].append(r.mean())
             slot["t"].append(t)
-            slot["real"].append(float(np.mean(real[:n_trades])))
+            slot["real"].append(float(np.mean(real[:m])))
     out: list[PowerResult] = []
     for e in edges_bp:
         slot = per_edge[float(e)]
@@ -456,6 +517,7 @@ def power_curve(
                 mean_r=float(np.mean(slot["r"])),
                 expected_r=ref.expected_r,
                 mean_t_excess=float(np.nanmean(slot["t"])),
+                drift_per_held_bar_bp=float(e) * drift_unit,
             )
         )
     return out
@@ -475,3 +537,16 @@ def minimum_detectable_edge(results: Sequence[PowerResult], *, power: float = 0.
         else:
             break
     return mde
+
+
+def power_test(*args, **kwargs):
+    """Retiré (F-8, F-11) : un tirage unique par avantage ne mesurait pas une puissance.
+
+    Utiliser ``power_curve`` (probabilité de détection pour un nombre de trades donné,
+    avantage planté par trade) et ``minimum_detectable_edge``.
+    """
+    raise NotImplementedError("lab.control.power_test est remplacé par power_curve + minimum_detectable_edge (F-8, F-11)")
+
+
+def smallest_detected_edge(*args, **kwargs):
+    raise NotImplementedError("remplacé par minimum_detectable_edge, qui exige une probabilité de détection ≥ power (F-8)")

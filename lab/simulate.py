@@ -78,17 +78,82 @@ def decisions(bars: Bars, signal: np.ndarray, population_filter: PopulationFilte
         raise ValueError("signal et bars doivent avoir la même longueur")
     out = np.zeros(n, dtype=signal.dtype if signal.dtype.kind in "iuf" else float)
     for t in range(n - 1):
-        s = signal[t]
-        if s == 0:
-            continue
-        if population_filter is not None and not population_filter(bars, t + 1):
-            continue
-        out[t] = s
+        out[t] = decision_at(bars, signal[t], t, population_filter)
     return out
+
+
+def decision_at(bars: Bars, signal_t, t: int, population_filter: PopulationFilter | None = None):
+    """Décision de la clôture t : ``signal_t`` si le filtre garde le trade d'entrée t+1, sinon 0.
+
+    ``bars`` doit contenir au moins la barre d'entrée t+1 (le filtre la reçoit :
+    c'est ce qui permet à un filtre acausal de la lire, et au détecteur de le voir).
+    """
+    if signal_t == 0:
+        return 0
+    if population_filter is not None and not population_filter(bars, t + 1):
+        return 0
+    return signal_t
 
 
 def _half(h: float | np.ndarray, k: int) -> float:
     return float(h[k]) if np.ndim(h) else float(h)
+
+
+@dataclass(frozen=True)
+class Costs:
+    """Coûts et conventions d'exécution, voir le docstring du module."""
+
+    stop_bp: float
+    target_bp: float
+    max_hold: int
+    spread_bp: float = 0.0
+    half_spread_bp: float | np.ndarray = 0.0
+    swap_long_bp: float = 0.0
+    swap_short_bp: float = 0.0
+    stop_slippage_bp: float = 0.0
+
+
+class Position:
+    """Position ouverte à l'ouverture de ``entry`` ; ``check`` la fait avancer d'une barre.
+
+    Utilisée par ``simulate_trades`` ET par le test de puissance (génération
+    barre par barre) : la mécanique d'exécution n'existe qu'ici.
+    """
+
+    def __init__(self, bars: Bars, entry: int, s: int, c: Costs):
+        self.entry, self.s, self.c = entry, s, c
+        self.mid_open = bars.open[entry]
+        h_in = _half(c.half_spread_bp, entry) * BP
+        self.price = self.mid_open * (1.0 + s * h_in)  # fill d'entrée : ask si long, bid si court
+        self.stop_dist = c.stop_bp * BP * self.mid_open
+        self.stop = self.price - s * self.stop_dist
+        self.target = self.price + s * c.target_bp * BP * self.mid_open
+
+    def check(self, bars: Bars, k: int) -> float | None:
+        """Prix de sortie si la barre k déclenche le stop ou l'objectif, sinon None."""
+        s, c = self.s, self.c
+        side = 1.0 - s * _half(c.half_spread_bp, k) * BP  # long : bid = mid(1-h) ; court : ask = mid(1+h)
+        lo, hi, op = bars.low[k] * side, bars.high[k] * side, bars.open[k] * side
+        hit_stop = lo <= self.stop if s > 0 else hi >= self.stop
+        hit_target = hi >= self.target if s > 0 else lo <= self.target
+        if hit_stop:
+            # au pire du niveau et de l'ouverture (gap), plus glissement explicite
+            level = min(self.stop, op) if s > 0 else max(self.stop, op)
+            return level - s * c.stop_slippage_bp * BP * self.mid_open
+        if hit_target:
+            return self.target  # jamais mieux que le niveau
+        return None
+
+    def time_exit_price(self, bars: Bars, k: int) -> float:
+        return bars.close[k] * (1.0 - self.s * _half(self.c.half_spread_bp, k) * BP)
+
+    def r(self, exit_price: float, exit_bar: int) -> float:
+        c = self.c
+        pnl = self.s * (exit_price - self.price)
+        pnl -= c.spread_bp * BP * self.mid_open
+        swap = c.swap_long_bp if self.s > 0 else c.swap_short_bp
+        pnl -= swap * BP * self.mid_open * (exit_bar - self.entry + 1)
+        return pnl / self.stop_dist
 
 
 def simulate_trades(
@@ -105,6 +170,8 @@ def simulate_trades(
     stop_slippage_bp: float = 0.0,
     population_filter: PopulationFilter | None = None,
 ) -> list[Trade]:
+    costs = Costs(stop_bp, target_bp, max_hold, spread_bp, half_spread_bp, swap_long_bp, swap_short_bp,
+                  stop_slippage_bp)
     decided = decisions(bars, signal, population_filter)
     n = len(bars)
     trades: list[Trade] = []
@@ -115,40 +182,17 @@ def simulate_trades(
             t += 1
             continue
         entry = t + 1
-        mid_open = bars.open[entry]
-        h_in = _half(half_spread_bp, entry) * BP
-        price = mid_open * (1.0 + s * h_in)  # fill d'entrée : ask si long, bid si court
-        stop_dist = stop_bp * BP * mid_open
-        target_dist = target_bp * BP * mid_open
-        stop = price - s * stop_dist
-        target = price + s * target_dist
+        pos = Position(bars, entry, s, costs)
         exit_bar = min(entry + max_hold - 1, n - 1)
         exit_price = None
         for k in range(entry, exit_bar + 1):
-            h = _half(half_spread_bp, k) * BP
-            side = 1.0 - s * h  # long : bid = mid(1-h) ; court : ask = mid(1+h)
-            lo, hi, op = bars.low[k] * side, bars.high[k] * side, bars.open[k] * side
-            hit_stop = lo <= stop if s > 0 else hi >= stop
-            hit_target = hi >= target if s > 0 else lo <= target
-            if hit_stop:
-                # au pire du niveau et de l'ouverture (gap), plus glissement explicite
-                level = min(stop, op) if s > 0 else max(stop, op)
-                exit_price = level - s * stop_slippage_bp * BP * mid_open
-                exit_bar = k
-                break
-            if hit_target:
-                exit_price = target  # jamais mieux que le niveau
+            exit_price = pos.check(bars, k)
+            if exit_price is not None:
                 exit_bar = k
                 break
         if exit_price is None:
-            h = _half(half_spread_bp, exit_bar) * BP
-            exit_price = bars.close[exit_bar] * (1.0 - s * h)
-        pnl = s * (exit_price - price)
-        pnl -= spread_bp * BP * mid_open
-        held = exit_bar - entry + 1
-        swap = swap_long_bp if s > 0 else swap_short_bp
-        pnl -= swap * BP * mid_open * held
-        trades.append(Trade(t, entry, exit_bar, s, pnl / stop_dist))
+            exit_price = pos.time_exit_price(bars, exit_bar)
+        trades.append(Trade(t, entry, exit_bar, s, pos.r(exit_price, exit_bar)))
         t = exit_bar + 1  # une position à la fois
     return trades
 

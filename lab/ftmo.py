@@ -67,6 +67,11 @@ def barrier_probability(
     sur la clôture. Le rééchantillonnage est i.i.d. par défaut (``block=1``) ;
     ``block>1`` conserve la dépendance sérielle à l'intérieur d'un bloc, avec
     enroulement circulaire de l'échantillon.
+
+    ``max_days`` (défaut 2000) borne l'horizon : ``p_target`` en dépend (la
+    part « non terminée » en témoigne) ; le fixer et le publier avec tout
+    chiffre. Un chiffre qui ne dit ni ``max_days`` ni ``block`` n'est pas
+    reproductible (F-22).
     """
     rng = np.random.default_rng(seed)
     r = np.asarray(daily_returns, dtype=float)
