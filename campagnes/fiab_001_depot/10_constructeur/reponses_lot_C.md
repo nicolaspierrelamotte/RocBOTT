@@ -1,0 +1,80 @@
+# Réponses du lot C — murs (`.claude/hooks/murs.py`, `tests/test_murs.py`)
+
+Objections traitées : F-1, F-10, F-20, F-21 (ids d'origine : S-4 ; O-9 et S-3 ; O-16, S-3 d-e, S-19 ; O-15, S-19).
+Aucun état n'est modifié dans les fiches d'origine : cette note donne ma réponse, le Greffier tranche.
+
+Principe commun : le hook compare maintenant des **segments de chemin résolus** (`realpath`, `..`, liens symboliques, chemin relatif résolu contre le `cwd` du JSON), jamais des sous-chaînes. Motif ancré à la racine du dépôt (`CLAUDE_PROJECT_DIR`) s'il commence par `/`, sinon valable n'importe où. Les chemins hors du dépôt (les `/x/...` fictifs de `tests/test_organisation.py`) sont comparés par suite de segments contiguë.
+
+Vérification des tests : `MURS_HOOK=<ancien hook> python3 -m pytest tests/test_murs.py` (ancien hook = `git show c9d69b9:.claude/hooks/murs.py`) donne 37 échecs sur 54 cas ; ce sont tous les cas de correction. Les 17 cas qui passent sur l'ancien hook sont des gardes de non-régression, nommés comme tels ci-dessous. Sur le nouveau : 54 passés.
+
+## F-1 — le mur du Juge ne couvrait ni `lab/`, ni `tests/`, ni le registre
+- état : traitée (sauf ce qui reste, ci-dessous).
+- fait : le Juge ne lit plus `lab/`, `tests/`, `registre/`, `docs/`, ni un `00_preenregistrement*`. Le Vérificateur (les deux) ne lit plus `docs/` ni `registre/registre.jsonl` (il lit toujours `registre/erreurs.md`, que sa consigne exige). `lab/` s'ouvre au Juge **par campagne** avec `campagnes/<id>/murs.json` = `{"juge_lit_lab": true}` ; le Juge et le Constructeur ne peuvent pas écrire ce fichier (hors de leur liste blanche). Session principale : toujours sans mur.
+- tests : `test_f1_le_juge_ne_lit_ni_lab_ni_tests_ni_registre_ni_prereg_ni_docs`, `test_f1_lab_s_ouvre_au_juge_par_campagne_et_pas_pour_les_autres`, `test_f1_le_verificateur_ne_lit_ni_le_registre_jsonl_ni_docs_mais_lit_erreurs_md` (échouent sur l'ancien hook) ; `test_f1_la_session_principale_n_a_pas_de_mur` (garde, passe sur les deux).
+- reste :
+  - **À faire par la session principale** : `campagnes/fiab_001_depot/murs.json` n'existe pas (je ne touche que mes fichiers). Tant qu'il n'est pas posé, un Juge de cette campagne ne lit pas `lab/` ; or `.claude/agents/juge.md` dit encore « `lab/` : tu peux t'en servir » et ne mentionne ni `tests/` ni `registre/`. Le texte de l'agent est à aligner.
+  - Le hook ne sait pas quelle campagne le Juge instruit : il prend `ROCBOTT_CAMPAGNE`, sinon la campagne du `cwd`, sinon l'**union** de toutes les campagnes (donc, avec deux campagnes dont une ouvre `lab/`, le Juge de l'autre le lit aussi si rien n'est posé). Pas testé : le cas `cwd` dans une campagne (seul `ROCBOTT_CAMPAGNE` et l'union le sont).
+  - La liste est une liste d'interdits, pas une liste de permis : le Juge lit encore `suivi/`, `idees/`, `README.md`, `PRISE_DE_RELAIS.md`, `scripts/` et les autres campagnes hors `10_constructeur/`, `20_verificateur/`. Les chiffres cibles peuvent y figurer (`suivi/`, `idees/` n'ont pas été lus). Une liste blanche de lecture pour le Juge serait plus sûre ; je ne l'ai pas faite, la consigne ne la demandait pas.
+  - Le chiffre cible reste écrit dans des fichiers (`registre/erreurs.md`, `journal_essais.md`, `tests/`) : le mur ne l'en retire pas, il empêche seulement le Juge de les ouvrir.
+  - Le Juge a Bash : `git log -p`, `git show`, `git diff` sans chemin ne sont pas vus par le mur (seuls les chemins cités le sont). `git show HEAD:lab/x.py` est refusé (le mot `lab/x.py` est résolu), `git log -p` ne l'est pas.
+  - Le Juge peut encore **exécuter** `lab/` sous un nom que le hook ne reconnaît pas (`python3 -c "__import__('l'+'ab')"`). Les formes usuelles (`import lab`, `from lab`, `-m lab`, `lab/`, `pytest`) sont refusées.
+
+## F-10 — périmètre effectif de Grep, Glob, Bash
+- état : traitée pour Grep, Glob, Read, et la forme usuelle de Bash ; Bash reste contournable.
+- fait :
+  - Grep : `path` absent = `cwd` ; le périmètre est refusé s'il est **dans** une zone interdite ou s'il en **contient** une (contrôle statique pour les zones ancrées + parcours du disque pour les autres, `.git` exclu, plafond de 200 000 entrées au-delà duquel on refuse). Un lien symbolique rencontré dans le périmètre est suivi : s'il mène à une zone interdite, refus.
+  - `glob` de Grep : refusé s'il nomme une zone interdite (un glob négatif `!...` n'est pas une exclusion admise). `type` : doit être un mot simple.
+  - Glob : le périmètre est la partie littérale du motif (relatif à `path` ou au `cwd`, ou le motif absolu) ; avec jokers, parcours récursif de ce périmètre. Le texte du motif est aussi comparé aux zones interdites.
+  - Read : chemin relatif résolu contre le `cwd`, `..` et liens résolus ; on teste le chemin écrit **et** le chemin résolu.
+  - Bash (rôles à mur) : (1) un nom interdit littéral long (≥ 6 caractères : `30_juge`, `cle_aveugle`, `coffre`, `10_constructeur`...) n'importe où dans la ligne, avec ou sans `/` ; (2) chaque mot de la ligne résolu contre le `cwd`, et ses développements de jokers (`glob`) ; (3) `grep -r`, `rg`, `find`, `tree`, `du`, `git grep`... : le périmètre (dossiers cités, sinon `cwd`) doit passer la même vérification que Grep ; (4) pour le Juge, `import lab`, `-m lab`, `lab/`, `pytest` quand `lab/` ou `tests/` lui sont fermés.
+  - Les patterns de Grep ne sont plus comparés aux zones interdites (l'ancien hook refusait un Grep dont le *motif* contenait `/30_juge/`, ce qui n'a pas de sens) : changement de comportement assumé.
+- tests : `test_f10_grep_sans_path_prend_le_cwd`, `test_f10_grep_sur_un_perimetre_qui_contient_la_zone_interdite`, `test_f10_dotdot_et_lien_symbolique_sont_resolus_avant_comparaison`, `test_f10_chemin_relatif_resolu_contre_le_cwd`, `test_f10_glob_sans_path_et_avec_jokers`, `test_f10_parametres_glob_et_type_de_grep_sont_inspectes`, `test_f10_bash_relatif_et_lecteurs_recursifs` (échouent sur l'ancien) ; `test_f10_prefixe_de_segments_pas_sous_chaine` (garde : un dossier nommé `a_30_juge_b` n'est pas la zone du Juge ; passe sur les deux hooks, mais pour l'ancien c'est à cause de la barre finale, pas d'un préfixe).
+- conséquence d'usage, à connaître : un Vérificateur ne peut plus faire un Grep ou un Glob à la racine du dépôt ni sur `campagnes/<id>` ; il doit viser `10_constructeur/code`, `lab`, etc. Un Constructeur ne peut plus faire `grep -rn x .` ni `rg x` à la racine (il contient `30_juge/`) : `grep -rn x lab tests` passe. Les autres lots qui tournent en parallèle y seront confrontés dès que ce hook est en place.
+- reste :
+  - Bash est lu par expressions régulières, pas par un interpréteur de shell. Passent encore : un script écrit puis lancé (`python3 script.py` qui ouvre le chemin), une variable (`d=30_ju; cat campagnes/c1/${d}ge/verdict.md`), une concaténation dans `python -c`, un `cd` suivi d'un nom court (« verdict.md » ne contient pas de nom assez long, mais le `cd` vers le dossier interdit est lui vu, car le mot est résolu), `find -exec`, `xargs`, un joker qui n'existe pas encore au moment du contrôle.
+  - Le contenu de `.git` n'est pas parcouru : `git show <rev>:chemin` est vu par le mot, mais `git cat-file`, `git log -p`, `git archive` sans chemin ne le sont pas.
+  - Un `Glob` avec jokers sur un périmètre qui contient une zone interdite est refusé même si le motif l'exclurait en pratique (`campagnes/*/code/*.py`) : on ne fait pas l'intersection motif-zone, on refuse. Faux positif voulu.
+  - Les outils MCP / WebFetch ne passent pas par ce contrôle (voir F-20).
+  - `10_constructeur/resultats/` d'un Vérificateur : le parcours du disque ne voit que ce qui existe. Un dossier créé après le contrôle, avant la lecture, n'est pas vu (course).
+
+## F-20 — murs ouverts par défaut
+- état : traitée en partie ; la partie « outils hors liste » est documentée, pas fermée.
+- fait :
+  - Rôle connu : fermé. JSON illisible → on retrouve `agent_type` par expression régulière dans le texte brut ; si c'est un rôle connu, refus. Champ `tool_input` qui n'est pas un objet, exception interne, écriture sans chemin : refus pour un rôle connu.
+  - Rôle inconnu : on laisse passer et on écrit sur stderr « rôle inconnu ... aucun mur appliqué » avec la liste des rôles connus. JSON illisible sans rôle retrouvable : passe, avec un message stderr.
+  - Casse, espaces et accents du rôle normalisés (« Vérificateur », « chef de projet », « chef_de_projet », « VERIFICATEUR » sont reconnus). Avant, ils tombaient en « rôle inconnu » et passaient sans mur.
+  - Outils hors liste (MCP, WebFetch, Task) : le hook les laisse passer, c'est écrit dans la docstring. Le `matcher` de `.claude/settings.json` (`Read|Write|Edit|NotebookEdit|Grep|Glob|Bash`) ne les envoie d'ailleurs pas au hook : je n'ai pas touché ce fichier.
+- tests : `test_f20_json_illisible_ferme_pour_un_role_connu`, `test_f20_role_inconnu_passe_mais_est_ecrit_sur_stderr`, `test_f20_variantes_de_casse_et_d_accent_du_role_sont_reconnues`, `test_f20_erreur_interne_ou_entree_etrange_ferme_pour_un_role_connu` (échouent sur l'ancien) ; `test_f20_outils_hors_liste_passent_pour_les_roles_qui_les_ont` (garde : documente le comportement voulu).
+- reste :
+  - Un rôle inconnu **n'est pas refusé** (consigne : laisser passer et écrire) ; il suffit d'une faute de frappe de `agent_type` pour ne plus avoir de mur. Le message sur stderr n'est vu que si quelqu'un lit les journaux du hook.
+  - Un JSON illisible dont le rôle n'est pas retrouvable passe.
+  - Les outils MCP (GitHub : lecture des fichiers poussés), `gh api` via un autre moyen, WebFetch, sous-agents : aucun mur. Pour qu'ils aient un mur, il faut deux changements hors de mon périmètre : élargir le `matcher` de `.claude/settings.json` et décider, rôle par rôle, quels outils MCP sont refusés. La session principale reste libre de mettre ce qu'elle veut dans les prompts des agents.
+  - Les tests de `tests/test_organisation.py` qui lisent une sortie vide (`None`) comme « autorisé » (`hook()` renvoie `None` pour une sortie vide) sont inchangés : un hook qui plante (code de sortie ≠ 0, sortie vide) est encore lu comme « autorisé » par ces tests. Mes tests utilisent aussi `libre()` = sortie vide ; ils ne contrôlent pas le code de sortie du hook. À corriger dans un lot qui possède `test_organisation.py`.
+
+## F-21 — murs d'écriture
+- état : traitée pour le dérapage ordinaire ; pas contre un contournement voulu.
+- fait :
+  - Liste blanche par **préfixe de chemin résolu** (chemin écrit et chemin résolu doivent tous deux être autorisés) : `…/10_constructeur/../20_verificateur/fusion.md` et `…/30_juge/entrees/../acausalite.json` sont refusés ; un nom qui contient la sous-chaîne sans être le dossier est refusé ; un lien symbolique qui sort de la zone est refusé.
+  - Sceau du pré-enregistrement : nom exact `00_preenregistrement.md`, en relatif aussi (`cd campagnes/c1 && echo x > 00_preenregistrement.md` ; `Edit` avec `file_path` relatif). Une v2 (`00_preenregistrement_v2.md`) reste possible.
+  - Bash, pour **tous** les rôles à mur : toute commande qui mentionne `00_preenregistrement` (ou un joker qui désigne le fichier, `0*_preenregistrement.md`) avec un verbe d'écriture (`>`, `tee`, `sed -i`, `perl`, `python`, `ruby`, `node`, `awk`, `git checkout/restore/stash/apply/reset/mv/rm/clean/switch`, `mv`, `cp`, `rm`, `truncate`, `dd`, `install`, `ln`, `ed`, `ex`, `unlink`, `shred`, `touch`, `rsync`) est refusée. La lecture (`cat`, `git log -- …`) reste libre.
+  - Bash, pour les rôles à liste blanche (constructeur, vérificateurs, juge, rapporteur, chef de projet, créateur) : les cibles d'écriture repérées (redirections, `tee`, `cp`/`mv`/`install`/`ln`/`rsync` (dernier argument ; `mv` toutes), `rm`, `touch`, `truncate`, `mkdir`, `chmod`, `dd of=`, `sed -i`, `perl -pi`, `git checkout/restore/...`) doivent être dans la liste blanche ; pour du code en ligne (`python -c`, heredoc, `perl -e`, `bash -c`), **tout chemin cité** dans le code est traité comme cible. `/dev/null`, `/dev/stderr` etc. sont tolérés.
+  - La docstring dit en toutes lettres que c'est un mur contre la dérive, pas contre un attaquant.
+- tests : `test_f21_ecriture_par_prefixe_resolu_pas_par_sous_chaine`, `test_f21_prereg_scelle_meme_en_relatif`, `test_f21_bash_ne_reecrit_pas_le_preenregistrement` (12 commandes × constructeur et greffier ; 12 échecs sur l'ancien hook sur 24 : l'ancien refusait déjà `>`, `cp`, `mv`, `rm`, `sed -i`, `tee` avec le chemin complet), `test_f21_bash_refuse_ce_que_la_liste_blanche_du_role_interdit` (9 commandes, toutes échouent sur l'ancien) ; gardes : `test_f21_bash_peut_lire_le_preenregistrement`, `test_f21_bash_ecrit_dans_les_zones_permises`.
+- reste (contournements que je sais encore possibles) :
+  - Un script écrit dans une zone permise puis lancé (`python3 lab/x.py` qui écrit dans `30_juge/` ou dans le pré-enregistrement) : le contenu du script n'est pas lu. C'est le contournement le plus simple, et il n'est pas fermé.
+  - Chemin construit par programme (`os.path.join('campagnes', 'c1', '00_' + 'preenregistrement.md')`), variable shell, `$(…)`, `eval`, `base64 -d | sh`.
+  - Outils absents de ma liste de verbes : `cat > f`, oui, mais `python3 -c` avec `shutil.move` sur un chemin construit, `curl -o`, `wget -O`, `unzip`, `tar x`, `git pull`, `git merge`, `git commit -a` (qui enregistre mais ne réécrit pas le fichier), `patch`, `ed`-like via `vim -c`, `xargs rm`, `find -delete`.
+  - Heredoc dont le terminateur est mal formé : le corps n'est alors pas retiré avant l'analyse des redirections (faux positifs ou négatifs).
+  - Faux positifs connus : un `>` ou `->` dans un heredoc ou dans une chaîne cité comme cible (`a -> b` donne `b`), un chemin avec `/` dans un `python -c` (même une division `a/b`) traité comme cible d'écriture. Choisis exprès : un refus se contourne en écrivant autrement.
+  - Le pré-enregistrement est toujours réécrivable par la **session principale** (aucun mur, voulu) et par un script du Greffier ; le contrôle d'empreinte à la porte P1 (F-6, F-9) n'est pas de mon lot.
+  - Le Greffier n'a pas de liste blanche d'écriture (règle conservée de l'ancien hook) : il écrit partout sauf le sceau.
+  - Pas testé : `NotebookEdit` (même code que Write, via `notebook_path`).
+
+## Conflits avec `tests/test_organisation.py`
+- Les 7 tests de murs de `test_organisation.py` passent avec le nouveau hook (lancés avec `CLAUDE_PROJECT_DIR` non posé : la racine est celle du dépôt qui contient le hook ; les chemins `/x/...` sont comparés par segments).
+- `python3 -m pytest -q tests/test_murs.py tests/test_organisation.py` : **62 passés, 3 échecs**, qui ne viennent pas du hook : `test_publier_exige_la_fusion_quand_deux_verificateurs_sont_passes`, `test_publier_passe_quand_toutes_les_portes_sont_ouvertes`, `test_aveugler_cache_la_cle_jusqu_au_verdict`. Ils appellent `greffier_publier` et `greffier_aveugler`, dont les fichiers (`scripts/greffier_publier.py`, `scripts/greffier_aveugler.py`, `scripts/_campagne.py`) sont modifiés dans l'arbre de travail par un autre lot au moment où je lance (message d'un échec : « verdict.md n'est pas commité : la clé reste scellée »). Je n'ai pas isolé l'arbre pour le prouver ; avec l'arbre de ce lot seul, les 11 tests de `test_organisation.py` passaient avant mon changement (11 passés, mesuré au début).
+- Aucun test de murs de `test_organisation.py` n'est devenu faux. Un test de `test_organisation.py` est devenu **plus faible que le hook** (lecture d'une sortie vide comme « autorisé », voir F-20), pas faux.
+
+## Essais (dénominateur)
+- Variantes du hook écrites : 1 (le candidat, installé). Variante de la conception écartée avant d'être écrite : un parcours uniquement par expressions de sous-chaîne pour Bash (écarté : c'est le défaut même de F-10). Une tentative d'écriture de brouillon dans le dossier temporaire de session a été refusée par le mur lui-même (le Constructeur n'y écrit pas) ; le brouillon a été écrit sous `10_constructeur/code/lot_C/` puis supprimé.
+- Constantes touchées : plafond de parcours 200 000 entrées ; longueur minimale 6 d'un nom interdit littéral dans Bash. Ni l'un ni l'autre n'a été réglé sur un résultat.

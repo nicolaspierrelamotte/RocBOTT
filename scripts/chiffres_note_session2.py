@@ -34,10 +34,29 @@ def section_1_1() -> None:
         print(f"{risk:7.2%} {r.std():7.2%} {a.p_target:14.3f} {b.p_target:13.3f} {a.median_days_to_target:10.0f}")
 
 
+SEED_1_2 = 11  # graine du flux de §1.2 (affichée à l'exécution)
+OVERSHOOT = 0.5826  # constante de dépassement de barrière d'une marche discrète (Siegmund)
+
+
+def logit_slope(sigma_day: float, n_days: int, barrier: float = 0.10) -> float:
+    """Pente k de logit P(+barrière avant -barrière) = k * t.
+
+    ``t`` = dérive réalisée de l'échantillon en erreurs types (R moyen / SE).
+    Brownien symétrique : k = 2 * barrière / (sigma_jour * sqrt(n_jours)), avec
+    la barrière relevée de 0,5826 * sigma_jour pour le dépassement discret.
+    """
+    return 2.0 * (barrier + OVERSHOOT * sigma_day) / (sigma_day * np.sqrt(n_days))
+
+
 def section_1_2() -> None:
-    """Le piège de J1 : la dérive accidentelle de l'échantillon."""
-    print("\n§1.2 — 20 échantillons NON centrés d'espérance VRAIE nulle, 16 000 trades chacun")
-    rng = np.random.default_rng(11)
+    """Le piège de J1 : la dérive accidentelle de l'échantillon.
+
+    Le piège est une VARIANCE, pas un biais : l'espérance de la médiane de 20
+    probabilités est 0,500 ; le tirage publié (0,31 / 0,59 / 0,83) n'est
+    qu'un tirage. Corrigé le 15/10/2026 après la campagne fiab_001_depot.
+    """
+    print(f"\n§1.2 — 20 échantillons NON centrés d'espérance VRAIE nulle, 16 000 trades chacun (graine {SEED_1_2})")
+    rng = np.random.default_rng(SEED_1_2)
     rng.normal(0.0, 1.0, size=(20_000, TRADES_PER_DAY, 5))  # aligne le flux sur §1.1
     ps = []
     for _ in range(20):
@@ -45,8 +64,41 @@ def section_1_2() -> None:
         ps.append(barrier_probability(r, target=0.10, max_loss=0.10, daily_loss=None, n_boot=1500, seed=7, max_days=60_000).p_target)
     ps = np.asarray(ps)
     n = 8000 * TRADES_PER_DAY
-    print(f"  vérité 0,500 | min {ps.min():.2f} | médiane {np.median(ps):.2f} | max {ps.max():.2f}")
+    print(f"  ANCIEN tirage (graine {SEED_1_2}, n_boot 1500) : min {ps.min():.2f} | médiane {np.median(ps):.2f} | max {ps.max():.2f}")
+    print(f"  écart-type des 20 probabilités de CE tirage = {ps.std(ddof=1):.2f}")
     print(f"  écart-type du R moyen réalisé sur {n} trades = 1/sqrt({n}) = {1/np.sqrt(n):.4f} R")
+
+    # Théorie : P = logistique(k t), t ~ N(0,1) (dérive réalisée en erreurs types).
+    sigma_day = 0.0025 * np.sqrt(TRADES_PER_DAY)
+    k = logit_slope(sigma_day, 8000)
+    print(f"  forme fermée : logit P = {k:.4f} x t   (t = dérive réalisée / erreur type)")
+    p196 = 1 / (1 + np.exp(-k * 1.96))
+    print(f"  dérive non significative |t| <= 1,96 : P dans [{1 - p196:.2f} ; {p196:.2f}]")
+    sim = np.random.default_rng(SEED_1_2).normal(size=(400_000, 20))
+    p_th = 1 / (1 + np.exp(-k * sim))
+    med = np.median(p_th, axis=1)
+    sd_med = med.std()
+    print(f"  théorie (400 000 x 20 tirages, graine {SEED_1_2}) : écart-type d'UNE probabilité = {p_th.std():.2f}")
+    print(f"  espérance de la médiane de 20 probabilités = {med.mean():.3f} ; son écart-type = {sd_med:.3f}")
+    print(f"  intervalle à t = {REGISTRY_T} : [{0.5 - REGISTRY_T * sd_med:.3f} ; {0.5 + REGISTRY_T * sd_med:.3f}]")
+    print(f"  le tirage publié (médiane {np.median(ps):.2f}) est à {(np.median(ps) - 0.5) / sd_med:.1f} écarts-types de la médiane : un tirage, pas un biais")
+
+
+def section_1_1_bis() -> None:
+    """Contrôle de 'indifférente' (§1.1) avec 20 000 rééchantillonnages : +5 % et +10 %."""
+    print("\n§1.1 bis — P(cible avant -10 %) à 0,25 % et 3 % de risque, 20 000 rééchantillonnages")
+    rng = np.random.default_rng(11)
+    nb = 20_000
+    res = {}
+    for risk in (0.0025, 0.03):
+        r = rng.normal(0.0, 1.0, size=(20_000, TRADES_PER_DAY)).sum(axis=1) * risk
+        r -= r.mean()
+        for tgt in (0.05, 0.10):
+            res[(risk, tgt)] = barrier_probability(r, target=tgt, max_loss=0.10, daily_loss=None, n_boot=nb, seed=5, max_days=60_000).p_target
+    for tgt in (0.05, 0.10):
+        a, b = res[(0.0025, tgt)], res[(0.03, tgt)]
+        se = np.sqrt(a * (1 - a) / nb + b * (1 - b) / nb)
+        print(f"  cible +{tgt:.0%} : 0,25 % -> {a:.3f} ; 3 % -> {b:.3f} ; écart {a - b:+.3f} = {(a - b) / se:.1f} erreurs types (rééchantillonnage seul)")
 
 
 def section_1_3(risk: float = 0.01) -> None:
@@ -95,6 +147,7 @@ def section_2(n_days: int = 400) -> None:
 
 if __name__ == "__main__":
     section_1_1()
+    section_1_1_bis()
     section_1_2()
     section_1_3()
     section_2()
