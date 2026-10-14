@@ -186,6 +186,11 @@ def test_f10_bash_relatif_et_lecteurs_recursifs(depot):
     assert refuse(lance(depot, "juge", "Bash", {"command": "python3 -c 'import lab.control'"}))
     assert libre(lance(depot, "constructeur", "Bash", {"command": "grep -rn foo lab tests"}))
     assert libre(lance(depot, "constructeur", "Bash", {"command": "git status --short"}))
+    # non récursif, ou mot français qui ressemble à une commande (« du », « find ») : pas un lecteur récursif
+    assert libre(lance(depot, "constructeur", "Bash", {"command": "grep -n foo lab/control.py"}))
+    assert libre(lance(depot, "constructeur", "Bash", {"command": "git commit -m 'le mur du Juge find tree' -- tests/test_x.py"}))
+    assert refuse(lance(depot, "constructeur", "Bash", {"command": "git grep foo"}))
+    assert refuse(lance(depot, "constructeur", "Bash", {"command": "FOO=1 find . -name '*.md'"}))
 
 
 # ---------------------------------------------------------------------------
