@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
+sys.dont_write_bytecode = True  # pas de __pycache__ dans 30_juge/ à l'import de recalcul.py
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT))
