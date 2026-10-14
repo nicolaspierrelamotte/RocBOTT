@@ -181,9 +181,9 @@ Si tout passe, l'entrée va dans `registre/registre.jsonl` avec l'empreinte du c
 
 Les autres scripts : `campagne_nouvelle.py` (squelette et gabarit), `greffier_aveugler.py` (A/B par tirage au sort, clé scellée jusqu'au verdict), `greffier_echantillon.py` (dix faits au hasard pour l'audit mensuel). `registre/erreurs.md` est amorcé avec les six erreurs connues et leur test.
 
-### Second Vérificateur sur Opus 4.8 (ajouté le 15/10)
+### Second Vérificateur sur Sonnet 5.5 (ajouté le 15/10)
 
-`verificateur-bis.md`, même consigne, modèle `claude-opus-4-8` : une génération antérieure, entraînée séparément, donc des angles morts moins recouvrants que ceux de Sonnet 5.5 et Opus 5.5 entre eux. Ce n'est pas « meilleur », c'est « différent », et c'est ce qu'on achète. Les deux Vérificateurs ne se voient pas (hook). Le Greffier écrit `fusion.md` et une ligne dans `registre/recouvrement.md`. Si, après dix campagnes, le recouvrement est proche de 100 %, le doublon se retire en sachant pourquoi. Changer le modèle est une ligne de l'en-tête du fichier.
+`verificateur-bis.md`, même consigne, modèle `claude-sonnet-5-5`. Décision de Nicolas du 15/10 : rester sur Sonnet 5.5 et Opus 5.5 seulement. La session avait proposé Opus 4.8 pour une décorrélation plus forte (génération différente) ; Nicolas a préféré la lisibilité de deux modèles seulement. Le second lecteur reste utile : modèle de taille différente, session neuve, fiche séparée. Les deux Vérificateurs ne se voient pas (hook). Le Greffier écrit `fusion.md` et une ligne dans `registre/recouvrement.md`. Si, après dix campagnes, le recouvrement est proche de 100 %, le doublon se retire en sachant pourquoi. Changer le modèle est une ligne de l'en-tête du fichier.
 
 ### Comment lancer une campagne — sans geste technique
 
