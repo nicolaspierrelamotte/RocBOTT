@@ -1,6 +1,6 @@
 # PRISE DE RELAIS — dépôt RocBOTT
 
-À lire en premier. Document autonome, mis à jour par chaque session.
+À lire en premier. **Depuis le 15/10, la session de travail est la session locale sur le PC de Nicolas : voir d'abord `RELAIS_SESSION_LOCALE.md`.** Document autonome, mis à jour par chaque session.
 
 ## Ce qu'est ce dépôt
 
