@@ -8,6 +8,15 @@
 - Le laboratoire historique est dans **OneDrive**. Ne le déplace pas, ne le modifie pas sans accord : lis-le en place. Tout ce que tu produis va dans ce dépôt.
 - Nicolas ne fait **aucun geste technique**. Tu exécutes, il décide. Ses deux seuls gestes réguliers : dire « oui » pour sceller un pré-enregistrement, et « oui » avant un Juge sur mesure décisive.
 
+## 0 bis. Vérifier que toute l'organisation est chargée (avant tout le reste)
+Tout est dans le dépôt : 8 agents (`.claude/agents/`), le mur (`.claude/hooks/murs.py`, branché par `.claude/settings.json`), la procédure `/campagne` (`.claude/skills/campagne/`), les registres, le suivi, les campagnes. Claude Code ne les charge **qu'au démarrage** d'une session ouverte dans `C:\RocBOTT`. Après le `git pull`, Nicolas ferme la session et en rouvre une dans `C:\RocBOTT` (et accepte la question de confiance sur le dossier, sans quoi les hooks ne tournent pas). Puis vérifie :
+1. La liste des agents montre : constructeur, verificateur, verificateur-bis, juge, greffier, rapporteur, chef_de_projet, createur.
+2. `/campagne etat` répond.
+3. **Le mur fonctionne sous Windows** — jamais testé hors Linux. Deux risques connus :
+   - `settings.json` appelle `python3`. Sous Windows, `python3` peut ne pas exister ou ouvrir le Microsoft Store : le hook échoue alors **sans rien bloquer**. Vérifie `python3 --version` ; sinon remplace par `py -3` ou `python` dans `.claude/settings.json` (tu es la session principale, tu as le droit) et commite.
+   - Le mur compare des chemins ; sous Windows ils ont des `\` et des lettres de lecteur. Lance `python -m pytest -q tests/test_murs.py`, puis un essai réel : demande à l'agent `juge` de lire `lab/control.py` → il doit être **refusé**. S'il ne l'est pas, le mur ne protège rien : corrige avant toute campagne.
+4. `python -m pytest -q` complet : vert attendu (243 tests sous Linux).
+
 ## 1. Ce qu'il faut lire, dans l'ordre
 1. `PRISE_DE_RELAIS.md` — état général.
 2. `fiches/fiche_2026-10-15.md` — ce qui s'est passé la nuit du 14 au 15, et les décisions en attente.
