@@ -317,3 +317,14 @@ def test_f21_bash_ecrit_dans_les_zones_permises(depot):
     assert libre(lance(depot, "greffier", "Bash", {"command": "echo x > registre/parking.md"}))
     assert refuse(lance(depot, "juge", "Bash", {"command": "echo x > campagnes/c1/10_constructeur/code/a.py"}))
     assert libre(lance(depot, "juge", "Bash", {"command": "echo x > campagnes/c1/30_juge/verdict.md"}))
+
+
+# ---------------------------------------------------------------------------
+# Décision de Nicolas du 15/10 : seule la session principale modifie le mur
+# ---------------------------------------------------------------------------
+def test_le_constructeur_ne_peut_plus_reecrire_le_mur(depot):
+    (depot / ".claude/hooks").mkdir(parents=True, exist_ok=True)
+    cible = depot / ".claude/hooks/murs.py"
+    for outil in ("Write", "Edit"):
+        assert refuse(lance(depot, "constructeur", outil, {"file_path": str(cible)})), outil
+    assert libre(lance(depot, "", "Edit", {"file_path": str(cible)}))  # session principale

@@ -95,7 +95,7 @@ INTERDIT_LECTURE: dict[str, list[str]] = {
 AUTORISE_ECRITURE: dict[str, list[str]] = {
     # Campagnes de fiabilisation (fiab_*) : le « code du Constructeur » est le dépôt lui-même.
     "constructeur": [_CAMP + "10_constructeur", _CAMP + "30_juge/entrees", "/lab", "/scripts",
-                     "/tests", "/docs", "/.claude/hooks"],
+                     "/tests", "/docs"],  # .claude/hooks retiré le 15/10 : seule la session principale modifie le mur (décision de Nicolas)
     "verificateur": [_CAMP + "20_verificateur/objections.md"],
     "verificateur-bis": [_CAMP + "20_verificateur/objections_bis.md"],
     "juge": [_CAMP + "30_juge"],
